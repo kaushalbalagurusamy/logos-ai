@@ -1,103 +1,116 @@
-export type UserRole = "Debater" | "Admin"
-export type PrepBankEntryType = "Evidence" | "Analytics" | "Definition" | "SLR" | "MetaStudy"
-export type FlowAction = "Added" | "Dropped" | "Cited"
-
+// User and authentication types
 export interface User {
   id: string
-  name: string
   email: string
-  role: UserRole
-  created_at: string
+  name: string
+  role: "student" | "coach" | "admin"
+  schoolId?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface AuthToken {
+  token: string
+  refreshToken: string
+  expiresAt: Date
+  user: User
+}
+
+// Source management types
+export interface Source {
+  id: string
+  title: string
+  author?: string
+  publication?: string
+  date?: Date
+  url?: string
+  citationStyle: "MLA" | "APA" | "Chicago"
+  authorQualifications?: string
+  studyMethodology?: string
+  filePath?: string
+  fileMetadata?: {
+    size: number
+    type: string
+    uploadDate: Date
+    originalName: string
+  }
+  version: number
+  userId: string
+  createdAt: Date
+  updatedAt: Date
+  cards: string[] // Evidence card IDs
+}
+
+// Prep bank types
+export interface PrepBankEntry {
+  id: string
+  title: string
+  content: string
+  type: "evidence" | "case" | "speech" | "analytics"
+  tags: string[]
+  userId: string
+  createdAt: Date
+  updatedAt: Date
+  metadata?: Record<string, any>
 }
 
 export interface Tag {
   id: string
-  label: string
+  name: string
   color: string
+  userId: string
+  createdAt: Date
 }
 
-export interface PrepBankEntry {
-  id: string
-  title: string
-  summary: string
-  author_id: string
-  entry_type: PrepBankEntryType
-  created_at: string
-  updated_at: string
-
-  // Evidence-specific fields
-  quote_text?: string
-  source_url?: string
-  pdf_url?: string
-  mla_citation?: string
-  author_qualifications?: string
-  methodology_details?: string
-  warrant_text?: string
-
-  // Analytics-specific fields
-  content?: string
-
-  // Definition-specific fields
-  definition_text?: string
-  clustered_card_ids?: string[]
-
-  // SLR/MetaStudy-specific fields
-  nodes?: any
-  edges?: any
-
-  // Relations
-  tags?: Tag[]
-  author?: User
-}
-
+// Case building types
 export interface CaseTemplate {
   id: string
   name: string
-  description: string
-  card_sequence: string[]
-  created_by: string
-  created_at: string
+  structure: any
+  userId: string
+  createdAt: Date
 }
 
+// Round and analytics types
 export interface Round {
   id: string
-  user_id: string
-  start_time: string
-  end_time?: string
+  tournament: string
+  opponent: string
+  side: "aff" | "neg"
+  result: "win" | "loss"
+  notes: string
+  userId: string
+  createdAt: Date
 }
 
-export interface RoundPrepEntry {
-  id: string
-  entry_id: string
-  round_id: string
-  added_at: string
+// AI service types
+export interface AIRequest {
+  prompt: string
+  context?: string
+  type: "ask" | "summarize" | "citation-format"
 }
 
-export interface FlowLog {
-  id: string
-  round_id: string
-  entry_id: string
-  action: FlowAction
-  timestamp: string
+export interface AIResponse {
+  response: string
+  confidence?: number
+  sources?: string[]
 }
 
-export interface JudgeProfile {
-  id: string
-  judge_name: string
-  profile_data: any
-  created_at: string
-}
-
-export interface OpponentProfile {
-  id: string
-  opponent_name: string
-  profile_data: any
-  created_at: string
-}
-
+// API response types
 export interface APIResponse<T = any> {
   success: boolean
   data?: T
   error?: string
   message?: string
+}
+
+// Search and filtering types
+export interface SearchFilters {
+  query?: string
+  type?: string
+  tags?: string[]
+  dateFrom?: Date
+  dateTo?: Date
+  limit?: number
+  offset?: number
 }

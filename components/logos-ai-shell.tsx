@@ -1,31 +1,47 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState } from "react"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { SourceManager } from "@/components/source-manager"
 import {
   FileText,
   BookOpen,
   BarChart3,
-  Mic,
+  Volume2,
+  Sheet,
   Search,
   Plus,
-  Save,
   Play,
-  Square,
-  Sparkles,
+  Wand2,
   Send,
   Settings,
   Circle,
-  Folder,
-  ChevronRight,
+  Mic,
+  Sparkles,
+  MessageCircle,
+  Bot,
+  Network,
   ChevronDown,
+  ChevronRight,
+  StickyNote,
 } from "lucide-react"
+
+import { ipccAR6Data } from "@/components/test-data"
+
+interface Source {
+  id: string
+  title: string
+  author?: string
+  date?: Date
+  cards: Array<{
+    id: string
+    shorthand: string
+  }>
+}
 
 interface LogosAIShellProps {
   user: {
@@ -33,256 +49,69 @@ interface LogosAIShellProps {
     name: string
     email: string
     role: string
+    preferences?: {
+      defaultCitationStyle: "MLA" | "APA" | "Chicago"
+    }
   }
-}
-
-// Mock data for development
-const mockEntries = {
-  evidence: [
-    {
-      id: "1",
-      title: "Climate Change Economic Impact Study",
-      summary: "Comprehensive analysis of economic costs of climate change",
-      entry_type: "Evidence",
-      tags: ["Climate Change", "Economics"],
-      created_at: "2024-01-15T10:30:00Z",
-      author_name: "Alice Johnson",
-      quote_text: "Climate change will cost the global economy $43 trillion by 2100 if current trends continue.",
-      source_url: "https://example.com/climate-study",
-      mla_citation: 'Smith, John. "Economic Impacts of Climate Change." Nature Climate Change, vol. 15, no. 3, 2023.',
-    },
-    {
-      id: "2",
-      title: "Renewable Energy Job Creation",
-      summary: "Study on employment opportunities in renewable energy sector",
-      entry_type: "Evidence",
-      tags: ["Economics", "Energy"],
-      created_at: "2024-01-14T09:15:00Z",
-      author_name: "Bob Smith",
-      quote_text: "The renewable energy sector could create 42 million jobs globally by 2050.",
-      source_url: "https://example.com/renewable-jobs",
-      mla_citation: 'Johnson, Sarah. "Green Jobs Report 2024." International Energy Agency, 2024.',
-    },
-  ],
-  cases: [
-    {
-      id: "3",
-      title: "Climate Action Affirmative Case",
-      summary: "Standard affirmative case structure for climate change resolutions",
-      entry_type: "Case",
-      tags: ["Climate Change", "Affirmative"],
-      created_at: "2024-01-13T14:20:00Z",
-      author_name: "Alice Johnson",
-    },
-  ],
-  analytics: [
-    {
-      id: "4",
-      title: "Debate Strategy: Climate Arguments",
-      summary: "Analysis of effective climate change argumentation strategies",
-      entry_type: "Analytics",
-      tags: ["Climate Change", "Strategy"],
-      created_at: "2024-01-12T16:45:00Z",
-      author_name: "Carol Admin",
-      content:
-        "When arguing climate change impacts, focus on: 1) Economic costs, 2) Timeframe urgency, 3) Disproportionate effects.",
-    },
-  ],
-  speeches: [
-    {
-      id: "5",
-      title: "Opening Statement Template",
-      summary: "Template for strong opening statements in climate debates",
-      entry_type: "Speech",
-      tags: ["Template", "Opening"],
-      created_at: "2024-01-11T11:30:00Z",
-      author_name: "Alice Johnson",
-    },
-  ],
 }
 
 export function LogosAIShell({ user }: LogosAIShellProps) {
-  const [activeCategory, setActiveCategory] = useState<"evidence" | "cases" | "analytics" | "speeches">("evidence")
-  const [selectedEntry, setSelectedEntry] = useState<string | null>(null)
-  const [entries, setEntries] = useState<any[]>([])
-  const [searchQuery, setSearchQuery] = useState("")
-  const [isRoundActive, setIsRoundActive] = useState(false)
-  const [currentRound, setCurrentRound] = useState<any>(null)
-  const [aiMessages, setAiMessages] = useState<any[]>([
-    {
-      id: "welcome",
-      type: "ai",
-      content:
-        "Hello! I'm your AI debate assistant. I can help you with research, case construction, argument analysis, and in-round support. What would you like to work on?",
-      timestamp: new Date(),
-      suggestions: [
-        "Research climate change evidence",
-        "Analyze opponent arguments",
-        "Build affirmative case structure",
-        "Find counter-evidence",
-      ],
-    },
-  ])
-  const [aiInput, setAiInput] = useState("")
-  const [selectedEntryData, setSelectedEntryData] = useState<any>(null)
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(["evidence", "cases"]))
-
-  // Load entries based on active category using mock data
-  const loadEntries = useCallback(async () => {
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 100))
-      const categoryEntries = mockEntries[activeCategory] || []
-      setEntries(categoryEntries)
-    } catch (error) {
-      console.error("Failed to load entries:", error)
-      setEntries([])
-    }
-  }, [activeCategory])
-
-  useEffect(() => {
-    loadEntries()
-  }, [loadEntries])
-
-  useEffect(() => {
-    if (selectedEntry) {
-      const allEntries = [
-        ...mockEntries.evidence,
-        ...mockEntries.cases,
-        ...mockEntries.analytics,
-        ...mockEntries.speeches,
-      ]
-      const entry = allEntries.find((e) => e.id === selectedEntry)
-      setSelectedEntryData(entry || null)
-    } else {
-      setSelectedEntryData(null)
-    }
-  }, [selectedEntry])
-
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) {
-      loadEntries()
-      return
-    }
-
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 100))
-      const allEntries = [
-        ...mockEntries.evidence,
-        ...mockEntries.cases,
-        ...mockEntries.analytics,
-        ...mockEntries.speeches,
-      ]
-
-      const searchResults = allEntries.filter(
-        (entry) =>
-          entry.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          entry.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (entry.quote_text && entry.quote_text.toLowerCase().includes(searchQuery.toLowerCase())) ||
-          (entry.content && entry.content.toLowerCase().includes(searchQuery.toLowerCase())),
-      )
-
-      setEntries(searchResults)
-    } catch (error) {
-      console.error("Search failed:", error)
-      setEntries([])
-    }
-  }
-
-  const startRound = async () => {
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 200))
-      const mockRound = {
-        id: `round-${Date.now()}`,
-        user_id: user.id,
-        start_time: new Date().toISOString(),
-      }
-      setCurrentRound(mockRound)
-      setIsRoundActive(true)
-    } catch (error) {
-      console.error("Failed to start round:", error)
-    }
-  }
-
-  const endRound = async () => {
-    if (!currentRound) return
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 200))
-      setIsRoundActive(false)
-      setCurrentRound(null)
-    } catch (error) {
-      console.error("Failed to end round:", error)
-    }
-  }
-
-  const sendAIMessage = async () => {
-    if (!aiInput.trim()) return
-
-    const userMessage = {
-      id: Date.now().toString(),
-      type: "user",
-      content: aiInput,
-      timestamp: new Date(),
-    }
-
-    setAiMessages((prev) => [...prev, userMessage])
-    const currentInput = aiInput
-    setAiInput("")
-
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 800))
-
-      let aiResponse = {
-        summary: `I understand you're asking about "${currentInput}". Let me help you with that.`,
-        suggestions: [
-          "Find supporting evidence",
-          "Develop counterarguments",
-          "Research expert opinions",
-          "Check recent studies",
-        ],
-      }
-
-      if (currentInput.toLowerCase().includes("climate")) {
-        aiResponse = {
-          summary:
-            "For climate change arguments, focus on quantified economic impacts, scientific consensus, and urgency of action. I can help you find specific evidence and develop strong warrants.",
-          suggestions: [
-            "Find economic impact studies",
-            "Research scientific consensus data",
-            "Develop urgency arguments",
-            "Prepare for skeptic responses",
-          ],
-        }
-      }
-
-      const aiMessage = {
-        id: (Date.now() + 1).toString(),
-        type: "ai",
-        content: aiResponse.summary,
-        suggestions: aiResponse.suggestions,
-        timestamp: new Date(),
-      }
-      setAiMessages((prev) => [...prev, aiMessage])
-    } catch (error) {
-      console.error("AI request failed:", error)
-    }
-  }
-
-  const toggleFolder = (folder: string) => {
-    const newExpanded = new Set(expandedFolders)
-    if (newExpanded.has(folder)) {
-      newExpanded.delete(folder)
-    } else {
-      newExpanded.add(folder)
-    }
-    setExpandedFolders(newExpanded)
-  }
+  const [activeCategory, setActiveCategory] = useState<"evidence" | "cases" | "analytics" | "speeches" | "flow">(
+    "evidence",
+  )
+  const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null)
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null)
+  const [expandedSources, setExpandedSources] = useState<string[]>([])
 
   const categories = [
     { key: "evidence" as const, label: "Evidence", icon: FileText, color: "#569cd6" },
     { key: "cases" as const, label: "Cases", icon: BookOpen, color: "#dcdcaa" },
     { key: "analytics" as const, label: "Analytics", icon: BarChart3, color: "#4ec9b0" },
-    { key: "speeches" as const, label: "Speeches", icon: Mic, color: "#c586c0" },
+    { key: "speeches" as const, label: "Speeches", icon: Volume2, color: "#c586c0" },
+    { key: "flow" as const, label: "Flow", icon: Sheet, color: "#ce9178" },
   ]
+
+  const mockSources: Source[] = [
+    {
+      id: ipccAR6Data.source.id,
+      title: ipccAR6Data.source.title,
+      author: ipccAR6Data.source.author,
+      date: ipccAR6Data.source.date,
+      cards: ipccAR6Data.source.cards.map((card) => ({
+        id: card.id,
+        shorthand: card.shorthand,
+      })),
+    },
+  ]
+
+  const handleToggleSource = (sourceId: string) => {
+    setExpandedSources((prev) => (prev.includes(sourceId) ? prev.filter((id) => id !== sourceId) : [...prev, sourceId]))
+  }
+
+  const handleSourceClick = (sourceId: string) => {
+    setSelectedSourceId(sourceId)
+    setSelectedCardId(null) // Clear card selection when selecting source
+    // Auto-expand the source when selected
+    if (!expandedSources.includes(sourceId)) {
+      setExpandedSources((prev) => [...prev, sourceId])
+    }
+  }
+
+  const handleCardClick = (sourceId: string, cardId: string) => {
+    setSelectedSourceId(sourceId)
+    setSelectedCardId(cardId)
+    // Ensure the source is expanded when selecting a card
+    if (!expandedSources.includes(sourceId)) {
+      setExpandedSources((prev) => [...prev, sourceId])
+    }
+  }
+
+  const formatSourceName = (source: Source) => {
+    const author = source.author ? source.author.split(" ").pop() : "Unknown"
+    const year = source.date ? source.date.getFullYear() : "Unknown"
+    const title = source.title.toLowerCase().replace(/\s+/g, "-").substring(0, 20)
+    return `[${author} ${year}] ${title}.pdf`
+  }
 
   return (
     <div className="h-screen flex bg-[#1e1e1e] text-[#cccccc] font-['Segoe_UI',Tahoma,Geneva,Verdana,sans-serif]">
@@ -335,9 +164,6 @@ export function LogosAIShell({ user }: LogosAIShellProps) {
                 <Search className="absolute left-2 top-1.5 h-3 w-3 text-[#a1a1a1]" />
                 <Input
                   placeholder="Search..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyPress={(e) => e.key === "Enter" && handleSearch()}
                   className="vscode-input pl-7 h-6 text-xs bg-[#2d2d30] border-[#37373d] text-[#cccccc] placeholder:text-[#a1a1a1]"
                 />
               </div>
@@ -346,101 +172,79 @@ export function LogosAIShell({ user }: LogosAIShellProps) {
             {/* File Tree */}
             <ScrollArea className="flex-1">
               <div className="p-1">
-                {/* Prep Bank Folder */}
-                <div className="mb-1">
-                  <div
-                    className="flex items-center px-1 py-0.5 text-xs cursor-pointer hover:bg-[#2a2d2e] rounded-sm"
-                    onClick={() => toggleFolder("prepbank")}
-                  >
-                    {expandedFolders.has("prepbank") ? (
-                      <ChevronDown className="h-3 w-3 mr-1 text-[#cccccc]" />
-                    ) : (
-                      <ChevronRight className="h-3 w-3 mr-1 text-[#cccccc]" />
-                    )}
-                    <Folder className="h-3 w-3 mr-1 text-[#dcb67a]" />
-                    <span className="text-[#cccccc]">PREP BANK</span>
-                  </div>
-
-                  {expandedFolders.has("prepbank") && (
-                    <div className="ml-4">
-                      {categories.map((category) => {
-                        const Icon = category.icon
-                        const categoryEntries = mockEntries[category.key] || []
-                        return (
-                          <div key={category.key} className="mb-1">
-                            <div
-                              className="flex items-center px-1 py-0.5 text-xs cursor-pointer hover:bg-[#2a2d2e] rounded-sm"
-                              onClick={() => {
-                                setActiveCategory(category.key)
-                                toggleFolder(category.key)
-                              }}
+                {activeCategory === "evidence" ? (
+                  <div className="space-y-1">
+                    <div className="px-2 py-1 text-xs text-[#a1a1a1] font-medium">SOURCES</div>
+                    <div className="space-y-0.5">
+                      {mockSources.map((source) => (
+                        <div key={source.id}>
+                          {/* Source Item */}
+                          <div className="flex items-center">
+                            <button
+                              onClick={() => handleToggleSource(source.id)}
+                              className="p-0.5 hover:bg-[#2a2d2e] rounded-sm"
                             >
-                              {expandedFolders.has(category.key) ? (
-                                <ChevronDown className="h-3 w-3 mr-1 text-[#cccccc]" />
+                              {expandedSources.includes(source.id) ? (
+                                <ChevronDown className="h-3 w-3 text-[#a1a1a1]" />
                               ) : (
-                                <ChevronRight className="h-3 w-3 mr-1 text-[#cccccc]" />
+                                <ChevronRight className="h-3 w-3 text-[#a1a1a1]" />
                               )}
-                              <Icon className="h-3 w-3 mr-1" style={{ color: category.color }} />
-                              <span className="text-[#cccccc]">{category.label}</span>
-                              <span className="ml-auto text-[#a1a1a1]">{categoryEntries.length}</span>
+                            </button>
+                            <div
+                              className={`flex-1 px-1 py-1 text-xs cursor-pointer rounded-sm flex items-center gap-2 transition-colors ${
+                                selectedSourceId === source.id && !selectedCardId
+                                  ? "bg-[#37373d] text-[#cccccc]"
+                                  : "text-[#cccccc] hover:bg-[#2a2d2e]"
+                              }`}
+                              onClick={() => handleSourceClick(source.id)}
+                            >
+                              <FileText className="h-3 w-3 text-[#569cd6] flex-shrink-0" />
+                              <span className="truncate">{formatSourceName(source)}</span>
                             </div>
-
-                            {expandedFolders.has(category.key) && (
-                              <div className="ml-4">
-                                {categoryEntries.map((entry) => (
-                                  <div
-                                    key={entry.id}
-                                    className={`flex items-center px-1 py-0.5 text-xs cursor-pointer rounded-sm ${
-                                      selectedEntry === entry.id
-                                        ? "bg-[#094771] text-[#ffffff]"
-                                        : "hover:bg-[#2a2d2e] text-[#cccccc]"
-                                    }`}
-                                    onClick={() => setSelectedEntry(entry.id)}
-                                  >
-                                    <Circle className="h-2 w-2 mr-2 fill-current" style={{ color: category.color }} />
-                                    <span className="truncate">{entry.title}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
                           </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                </div>
 
-                {/* Round Status */}
-                {isRoundActive && (
-                  <div className="mb-1">
-                    <div className="flex items-center px-1 py-0.5 text-xs">
-                      <Circle className="h-2 w-2 mr-2 fill-current text-green-500" />
-                      <span className="text-[#cccccc]">Active Round</span>
+                          {/* Evidence Cards (when expanded) */}
+                          {expandedSources.includes(source.id) && (
+                            <div className="ml-4 space-y-0.5">
+                              {source.cards.map((card) => (
+                                <div
+                                  key={card.id}
+                                  className={`px-2 py-1 text-xs cursor-pointer rounded-sm flex items-center gap-2 transition-colors ${
+                                    selectedSourceId === source.id && selectedCardId === card.id
+                                      ? "bg-[#37373d] text-[#cccccc]"
+                                      : "text-[#cccccc] hover:bg-[#2a2d2e]"
+                                  }`}
+                                  onClick={() => handleCardClick(source.id, card.id)}
+                                >
+                                  <StickyNote className="h-3 w-3 text-[#569cd6] opacity-70 flex-shrink-0" />
+                                  <span className="truncate">{card.shorthand}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   </div>
+                ) : (
+                  <div className="px-1 py-0.5 text-xs text-[#a1a1a1]">No files yet</div>
                 )}
               </div>
             </ScrollArea>
 
             {/* Round Controls */}
             <div className="p-2 border-t border-[#37373d]">
-              {isRoundActive ? (
-                <Button
-                  onClick={endRound}
-                  className="w-full h-7 text-xs bg-[#d16969] hover:bg-[#b85450] text-white border-0 rounded-sm"
-                >
-                  <Square className="h-3 w-3 mr-1" />
-                  End Round
+              <div className="flex gap-1">
+                <Button className="flex-1 h-7 text-xs bg-[#007acc] hover:bg-[#005a9e] text-white border-0 rounded-sm">
+                  <Play className="h-3 w-3" />
                 </Button>
-              ) : (
                 <Button
-                  onClick={startRound}
-                  className="w-full h-7 text-xs bg-[#007acc] hover:bg-[#005a9e] text-white border-0 rounded-sm"
+                  variant="outline"
+                  className="h-7 px-2 text-xs border-[#37373d] bg-[#2d2d30] text-[#cccccc] hover:bg-[#37373d]"
                 >
-                  <Play className="h-3 w-3 mr-1" />
-                  Start Round
+                  <Mic className="h-3 w-3" />
                 </Button>
-              )}
+              </div>
             </div>
           </div>
         </ResizablePanel>
@@ -450,126 +254,14 @@ export function LogosAIShell({ user }: LogosAIShellProps) {
         {/* Editor Area */}
         <ResizablePanel defaultSize={50} minSize={30}>
           <div className="h-full flex flex-col vscode-editor">
-            {selectedEntryData ? (
-              <>
-                {/* Tab Bar */}
-                <div className="flex border-b border-[#37373d] bg-[#252526]">
-                  <div className="flex items-center px-3 py-2 bg-[#1e1e1e] border-r border-[#37373d] text-xs text-[#cccccc]">
-                    <Circle className="h-2 w-2 mr-2 fill-current text-[#569cd6]" />
-                    {selectedEntryData.title}
-                  </div>
-                </div>
-
-                {/* Editor Content */}
-                <Tabs defaultValue="content" className="flex-1 flex flex-col">
-                  <TabsList className="bg-[#252526] border-b border-[#37373d] rounded-none h-8 p-0">
-                    <TabsTrigger
-                      value="content"
-                      className="data-[state=active]:bg-[#1e1e1e] data-[state=active]:text-[#cccccc] text-[#a1a1a1] rounded-none border-r border-[#37373d] px-3 h-8 text-xs"
-                    >
-                      Content
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="metadata"
-                      className="data-[state=active]:bg-[#1e1e1e] data-[state=active]:text-[#cccccc] text-[#a1a1a1] rounded-none border-r border-[#37373d] px-3 h-8 text-xs"
-                    >
-                      Metadata
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="analysis"
-                      className="data-[state=active]:bg-[#1e1e1e] data-[state=active]:text-[#cccccc] text-[#a1a1a1] rounded-none px-3 h-8 text-xs"
-                    >
-                      Analysis
-                    </TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="content" className="flex-1 p-4 m-0">
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-xs font-medium text-[#cccccc] mb-1">Title</label>
-                        <Input
-                          defaultValue={selectedEntryData.title}
-                          className="vscode-input bg-[#2d2d30] border-[#37373d] text-[#cccccc] text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-[#cccccc] mb-1">
-                          {selectedEntryData.entry_type === "Evidence" ? "Quote Text" : "Content"}
-                        </label>
-                        <Textarea
-                          defaultValue={selectedEntryData.quote_text || selectedEntryData.content || ""}
-                          placeholder="Enter your content here..."
-                          className="min-h-[300px] resize-none bg-[#2d2d30] border-[#37373d] text-[#cccccc] text-sm font-mono leading-relaxed"
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <Button className="vscode-button">
-                          <Save className="h-3 w-3 mr-1" />
-                          Save
-                        </Button>
-                        <Button
-                          variant="outline"
-                          className="border-[#37373d] bg-[#2d2d30] text-[#cccccc] hover:bg-[#37373d] text-xs"
-                        >
-                          Export
-                        </Button>
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="metadata" className="flex-1 p-4 m-0">
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-xs font-medium text-[#cccccc] mb-1">Tags</label>
-                        <div className="flex flex-wrap gap-1 mb-2">
-                          {selectedEntryData.tags?.map((tag: string) => (
-                            <Badge key={tag} className="bg-[#37373d] text-[#cccccc] text-xs border-0">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                      {selectedEntryData.source_url && (
-                        <div>
-                          <label className="block text-xs font-medium text-[#cccccc] mb-1">Source URL</label>
-                          <Input
-                            defaultValue={selectedEntryData.source_url}
-                            className="vscode-input bg-[#2d2d30] border-[#37373d] text-[#cccccc] text-sm"
-                          />
-                        </div>
-                      )}
-                      {selectedEntryData.mla_citation && (
-                        <div>
-                          <label className="block text-xs font-medium text-[#cccccc] mb-1">Citation</label>
-                          <Textarea
-                            defaultValue={selectedEntryData.mla_citation}
-                            className="min-h-[100px] bg-[#2d2d30] border-[#37373d] text-[#cccccc] text-sm font-mono"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="analysis" className="flex-1 p-4 m-0">
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-xs font-medium text-[#cccccc] mb-1">Warrant Analysis</label>
-                        <Textarea
-                          placeholder="Explain how this evidence supports your argument..."
-                          className="min-h-[150px] bg-[#2d2d30] border-[#37373d] text-[#cccccc] text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-[#cccccc] mb-1">Strategic Notes</label>
-                        <Textarea
-                          placeholder="How to use this evidence strategically..."
-                          className="min-h-[100px] bg-[#2d2d30] border-[#37373d] text-[#cccccc] text-sm"
-                        />
-                      </div>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </>
+            {activeCategory === "evidence" ? (
+              <SourceManager
+                user={user}
+                selectedSourceId={selectedSourceId}
+                selectedCardId={selectedCardId}
+                expandedSources={expandedSources}
+                onToggleSource={handleToggleSource}
+              />
             ) : (
               <div className="flex-1 flex items-center justify-center">
                 <div className="text-center">
@@ -590,100 +282,109 @@ export function LogosAIShell({ user }: LogosAIShellProps) {
             {/* Panel Header */}
             <div className="px-3 py-2 border-b border-[#37373d] flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-[#007acc]" />
-                <span className="text-xs font-medium uppercase tracking-wide text-[#cccccc]">AI Assistant</span>
+                <Wand2 className="h-4 w-4 text-[#007acc]" />
+                <span className="text-xs font-medium uppercase tracking-wide text-[#cccccc]">Logos AI</span>
               </div>
               <div className="flex items-center gap-1">
-                <Circle className={`h-2 w-2 fill-current ${isRoundActive ? "text-green-500" : "text-[#a1a1a1]"}`} />
-                <span className="text-xs text-[#a1a1a1]">{isRoundActive ? "Live" : "Idle"}</span>
+                <Circle className="h-2 w-2 fill-current text-[#a1a1a1]" />
+                <span className="text-xs text-[#a1a1a1]">Idle</span>
               </div>
             </div>
 
-            {/* Quick Actions */}
-            <div className="p-2 border-b border-[#37373d]">
-              <div className="grid grid-cols-2 gap-1">
-                {[
-                  { icon: Search, label: "Research", action: "Help me research climate change evidence" },
-                  { icon: BarChart3, label: "Analyze", action: "Analyze this argument structure" },
-                  { icon: BookOpen, label: "Build", action: "Help me build a case structure" },
-                  { icon: FileText, label: "Summarize", action: "Summarize this evidence" },
-                ].map((item) => (
-                  <Button
-                    key={item.label}
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setAiInput(item.action)}
-                    className="h-6 text-xs justify-start gap-1 hover:bg-[#2a2d2e] text-[#cccccc] p-1"
-                  >
-                    <item.icon className="h-3 w-3" />
-                    {item.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
+            {/* AI Mode Tabs */}
+            <Tabs defaultValue="ask" className="flex-1 flex flex-col">
+              <TabsList className="bg-[#252526] border-b border-[#37373d] rounded-none h-8 p-0 mx-3 mt-2">
+                <TabsTrigger
+                  value="ask"
+                  className="data-[state=active]:bg-[#37373d] data-[state=active]:text-[#cccccc] text-[#a1a1a1] rounded-none px-3 h-6 text-xs flex items-center gap-1"
+                >
+                  <MessageCircle className="h-3 w-3" />
+                  Ask
+                </TabsTrigger>
+                <TabsTrigger
+                  value="agent"
+                  className="data-[state=active]:bg-[#37373d] data-[state=active]:text-[#cccccc] text-[#a1a1a1] rounded-none px-3 h-6 text-xs flex items-center gap-1"
+                >
+                  <Bot className="h-3 w-3" />
+                  Agent
+                </TabsTrigger>
+                <TabsTrigger
+                  value="orchestrator"
+                  className="data-[state=active]:bg-[#37373d] data-[state=active]:text-[#cccccc] text-[#a1a1a1] rounded-none px-3 h-6 text-xs flex items-center gap-1"
+                >
+                  <Network className="h-3 w-3" />
+                  Orchestrator
+                </TabsTrigger>
+              </TabsList>
 
-            {/* Messages */}
-            <ScrollArea className="flex-1 p-3">
-              <div className="space-y-3">
-                {aiMessages.map((message) => (
-                  <div key={message.id} className={`flex ${message.type === "user" ? "justify-end" : "justify-start"}`}>
-                    <div
-                      className={`max-w-[85%] rounded-sm p-2 text-xs ${
-                        message.type === "user"
-                          ? "bg-[#007acc] text-white"
-                          : "bg-[#2d2d30] text-[#cccccc] border border-[#37373d]"
-                      }`}
-                    >
-                      <p className="leading-relaxed">{message.content}</p>
-                      <div className="text-xs opacity-70 mt-1">{message.timestamp.toLocaleTimeString()}</div>
+              <TabsContent value="ask" className="flex-1 flex flex-col m-0">
+                {/* Messages */}
+                <ScrollArea className="flex-1 p-3">
+                  <div className="space-y-3">{/* Empty message area */}</div>
+                </ScrollArea>
 
-                      {message.suggestions && (
-                        <div className="mt-2 space-y-1">
-                          <p className="text-xs font-medium opacity-80">Suggestions:</p>
-                          <div className="flex flex-wrap gap-1">
-                            {message.suggestions.map((suggestion: string, index: number) => (
-                              <Badge
-                                key={index}
-                                variant="secondary"
-                                className="text-xs cursor-pointer hover:bg-[#37373d] bg-[#37373d] text-[#cccccc] border-0"
-                                onClick={() => setAiInput(suggestion)}
-                              >
-                                {suggestion}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                {/* Input */}
+                <div className="p-3 border-t border-[#37373d]">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Ask me anything..."
+                      className="flex-1 vscode-input bg-[#2d2d30] border-[#37373d] text-[#cccccc] text-xs"
+                    />
+                    <Button className="vscode-button h-7 px-2">
+                      <Send className="h-3 w-3" />
+                    </Button>
                   </div>
-                ))}
-              </div>
-            </ScrollArea>
+                  <p className="text-xs text-[#a1a1a1] mt-1 text-center">
+                    AI can make mistakes. Verify important information.
+                  </p>
+                </div>
+              </TabsContent>
 
-            {/* Input */}
-            <div className="p-3 border-t border-[#37373d]">
-              <div className="flex gap-2">
-                <Input
-                  value={aiInput}
-                  onChange={(e) => setAiInput(e.target.value)}
-                  placeholder="Ask me anything..."
-                  onKeyPress={(e) => e.key === "Enter" && sendAIMessage()}
-                  className="flex-1 vscode-input bg-[#2d2d30] border-[#37373d] text-[#cccccc] text-xs"
-                />
-                <Button onClick={sendAIMessage} className="vscode-button h-7 px-2">
-                  <Send className="h-3 w-3" />
-                </Button>
-              </div>
-              <p className="text-xs text-[#a1a1a1] mt-1 text-center">
-                AI can make mistakes. Verify important information.
-              </p>
-            </div>
+              <TabsContent value="agent" className="flex-1 flex flex-col m-0">
+                {/* Agent Messages */}
+                <ScrollArea className="flex-1 p-3">
+                  <div className="space-y-3">{/* Empty agent area */}</div>
+                </ScrollArea>
+
+                {/* Agent Input */}
+                <div className="p-3 border-t border-[#37373d]">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Give the agent a task..."
+                      className="flex-1 vscode-input bg-[#2d2d30] border-[#37373d] text-[#cccccc] text-xs"
+                    />
+                    <Button className="vscode-button h-7 px-2">
+                      <Send className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-[#a1a1a1] mt-1 text-center">Agent will work autonomously on your task.</p>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="orchestrator" className="flex-1 flex flex-col m-0">
+                {/* Orchestrator Messages */}
+                <ScrollArea className="flex-1 p-3">
+                  <div className="space-y-3">{/* Empty orchestrator area */}</div>
+                </ScrollArea>
+
+                {/* Orchestrator Input */}
+                <div className="p-3 border-t border-[#37373d]">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Coordinate multiple AI agents..."
+                      className="flex-1 vscode-input bg-[#2d2d30] border-[#37373d] text-[#cccccc] text-xs"
+                    />
+                    <Button className="vscode-button h-7 px-2">
+                      <Send className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-[#a1a1a1] mt-center">Orchestrator manages multiple specialized agents.</p>
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         </ResizablePanel>
       </ResizablePanelGroup>
-
-      {/* Status Bar */}
-      
     </div>
   )
 }

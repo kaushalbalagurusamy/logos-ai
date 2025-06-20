@@ -9,6 +9,9 @@ export default function LogosAI() {
     name: "Alice Johnson",
     email: "alice@example.com",
     role: "Debater",
+    preferences: {
+      defaultCitationStyle: "MLA" as const,
+    },
   }
 
   return <LogosAIShell user={user} />

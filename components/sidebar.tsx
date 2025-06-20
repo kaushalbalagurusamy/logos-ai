@@ -29,33 +29,34 @@ export function Sidebar({ activeCategory, onCategoryChange, onEntrySelect }: Sid
 
   // Mock data - in real app, this would come from API
   useEffect(() => {
-    const mockEntries: PrepBankEntry[] = [
-      {
-        id: "1",
-        title: "Climate Change Economic Impact Study",
-        summary: "Comprehensive analysis of economic costs of climate change",
-        entry_type: "Evidence",
-        tags: ["Climate Change", "Economics"],
-        created_at: "2024-01-15",
-      },
-      {
-        id: "2",
-        title: "Debate Strategy: Climate Arguments",
-        summary: "Analysis of effective climate change argumentation strategies",
-        entry_type: "Analytics",
-        tags: ["Climate Change"],
-        created_at: "2024-01-14",
-      },
-      {
-        id: "3",
-        title: "Carbon Pricing Definition",
-        summary: "Comprehensive definition of carbon pricing mechanisms",
-        entry_type: "Definition",
-        tags: ["Climate Change", "Economics"],
-        created_at: "2024-01-13",
-      },
-    ]
-    setEntries(mockEntries)
+    // const mockEntries: PrepBankEntry[] = [
+    //   {
+    //     id: "1",
+    //     title: "Climate Change Economic Impact Study",
+    //     summary: "Comprehensive analysis of economic costs of climate change",
+    //     entry_type: "Evidence",
+    //     tags: ["Climate Change", "Economics"],
+    //     created_at: "2024-01-15",
+    //   },
+    //   {
+    //     id: "2",
+    //     title: "Debate Strategy: Climate Arguments",
+    //     summary: "Analysis of effective climate change argumentation strategies",
+    //     entry_type: "Analytics",
+    //     tags: ["Climate Change"],
+    //     created_at: "2024-01-14",
+    //   },
+    //   {
+    //     id: "3",
+    //     title: "Carbon Pricing Definition",
+    //     summary: "Comprehensive definition of carbon pricing mechanisms",
+    //     entry_type: "Definition",
+    //     tags: ["Climate Change", "Economics"],
+    //     created_at: "2024-01-13",
+    //   },
+    // ]
+    // setEntries(mockEntries)
+    setEntries([])
   }, [])
 
   const categories = [
