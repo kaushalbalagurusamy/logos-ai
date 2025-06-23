@@ -41,6 +41,118 @@ export interface Source {
   cards: string[] // Evidence card IDs
 }
 
+// Evidence Card types
+export interface EvidenceCard {
+  id: string
+  sourceId: string
+  tagLine: string
+  evidence: string
+  shorthand?: string
+  formattingData?: {
+    emphasis: Array<{
+      start: number
+      end: number
+      style: "bold-underline"
+      font: string
+      size: number
+    }>
+    highlights: Array<{
+      start: number
+      end: number
+      color: "pastel-blue" | "pastel-pink" | "pastel-green" | "pastel-yellow"
+    }>
+    minimized: Array<{
+      start: number
+      end: number
+      size: number
+    }>
+  }
+  positionInSource?: number
+  userId: string
+  createdAt: Date
+  updatedAt: Date
+  source?: Source
+}
+
+// Analytics types
+export interface Analytics {
+  id: string
+  title: string
+  content: string
+  summary?: string
+  authorId: string
+  folderId?: string // For organizational structure
+  linkedSourceId?: string // Optional link to source
+  linkedCardId?: string // Optional link to evidence card
+  linkType?: "paraphrase" | "comparison" | "extension" | "response" | null
+  formattingPreferences: {
+    font: "Times New Roman" | "Arial" | "Georgia"
+    size: number
+    bold: boolean
+    italic: boolean
+  }
+  tags: string[]
+  version: number
+  userId: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface AnalyticsFolder {
+  id: string
+  name: string
+  parentId?: string // For nested folder structure
+  userId: string
+  createdAt: Date
+  updatedAt: Date
+  analytics: Analytics[]
+}
+
+export interface AnalyticsLink {
+  id: string
+  analyticsId: string
+  targetType: "source" | "card"
+  targetId: string
+  linkType: "paraphrase" | "comparison" | "extension" | "response"
+  description?: string
+  createdAt: Date
+}
+
+// Analytics-specific API types for prep-bank integration
+export interface AnalyticsFormattingPreferences {
+  font: "Times New Roman" | "Arial" | "Georgia"
+  size: number
+  bold: boolean
+  italic: boolean
+}
+
+export interface AnalyticsContentData {
+  content: string
+  formatting: AnalyticsFormattingPreferences
+}
+
+export interface FolderNode {
+  name: string
+  path: string
+  children: FolderNode[]
+  analytics: PrepBankEntry[]
+}
+
+export interface CreateFolderRequest {
+  name: string
+  parentPath?: string
+}
+
+export interface UpdateFormattingRequest {
+  formattingPreferences: AnalyticsFormattingPreferences
+}
+
+export interface CreateLinkRequest {
+  sourceEntryId: string
+  linkType: "paraphrase" | "comparison" | "extension" | "response"
+  description?: string
+}
+
 // Prep bank types
 export interface PrepBankEntry {
   id: string

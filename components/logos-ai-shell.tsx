@@ -7,10 +7,14 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SourceManager } from "@/components/source-manager"
+import AnalyticsList from "@/components/analytics-list"
+import AnalyticsFolderTree from "@/components/analytics-folder-tree"
+import AnalyticsEditor from "@/components/analytics-editor"
+import { analyticsTestData } from "@/components/analytics-test-data" // Import sample data
+
 import {
   FileText,
   BookOpen,
-  BarChart3,
   Volume2,
   Sheet,
   Search,
@@ -28,9 +32,10 @@ import {
   ChevronDown,
   ChevronRight,
   StickyNote,
+  PencilLine,
 } from "lucide-react"
 
-import { ipccAR6Data } from "@/components/test-data"
+import { ipccAR6Data } from "@/components/test-data" // This will be removed later as per previous instructions
 
 interface Source {
   id: string
@@ -57,20 +62,26 @@ interface LogosAIShellProps {
 
 export function LogosAIShell({ user }: LogosAIShellProps) {
   const [activeCategory, setActiveCategory] = useState<"evidence" | "cases" | "analytics" | "speeches" | "flow">(
-    "evidence",
+    "analytics", // Set default to analytics for testing
   )
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null)
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null)
   const [expandedSources, setExpandedSources] = useState<string[]>([])
 
+  // Analytics specific states
+  const [selectedAnalyticsId, setSelectedAnalyticsId] = useState<string | null>(null)
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
+  const [isEditingAnalytics, setIsEditingAnalytics] = useState(false)
+
   const categories = [
     { key: "evidence" as const, label: "Evidence", icon: FileText, color: "#569cd6" },
+    { key: "analytics" as const, label: "Analytics", icon: PencilLine, color: "#4ec9b0" }, // Moved and icon changed
     { key: "cases" as const, label: "Cases", icon: BookOpen, color: "#dcdcaa" },
-    { key: "analytics" as const, label: "Analytics", icon: BarChart3, color: "#4ec9b0" },
     { key: "speeches" as const, label: "Speeches", icon: Volume2, color: "#c586c0" },
     { key: "flow" as const, label: "Flow", icon: Sheet, color: "#ce9178" },
   ]
 
+  // Mock sources (will be empty after next cleanup)
   const mockSources: Source[] = [
     {
       id: ipccAR6Data.source.id,
@@ -112,6 +123,59 @@ export function LogosAIShell({ user }: LogosAIShellProps) {
     const title = source.title.toLowerCase().replace(/\s+/g, "-").substring(0, 20)
     return `[${author} ${year}] ${title}.pdf`
   }
+
+  // Analytics handlers
+  const handleAnalyticsSelect = (analyticsId: string) => {
+    setSelectedAnalyticsId(analyticsId)
+    setIsEditingAnalytics(true)
+  }
+
+  const handleAnalyticsSave = async (analyticsData: any) => {
+    console.log("Saving analytics:", analyticsData)
+    // In a real app, you'd call your API here
+    setIsEditingAnalytics(false)
+    setSelectedAnalyticsId(null)
+  }
+
+  const handleAnalyticsCancel = () => {
+    setIsEditingAnalytics(false)
+    setSelectedAnalyticsId(null)
+  }
+
+  const handleAnalyticsDelete = (analyticsId: string) => {
+    console.log("Deleting analytics:", analyticsId)
+    // Implement deletion logic
+  }
+
+  const handleAnalyticsDuplicate = (analyticsId: string) => {
+    console.log("Duplicating analytics:", analyticsId)
+    // Implement duplication logic
+  }
+
+  const handleFolderCreate = (name: string, parentId?: string) => {
+    console.log("Creating folder:", name, parentId)
+    // Implement folder creation logic
+  }
+
+  const handleFolderRename = (folderId: string, newName: string) => {
+    console.log("Renaming folder:", folderId, newName)
+    // Implement folder rename logic
+  }
+
+  const handleFolderDelete = (folderId: string) => {
+    console.log("Deleting folder:", folderId)
+    // Implement folder deletion logic
+  }
+
+  const handleFolderSelect = (folderId: string) => {
+    setSelectedFolderId(folderId)
+    setSelectedAnalyticsId(null) // Clear analytics selection when selecting folder
+    setIsEditingAnalytics(false)
+  }
+
+  const currentAnalytics = selectedAnalyticsId
+    ? analyticsTestData.analytics.find((a) => a.id === selectedAnalyticsId)
+    : undefined
 
   return (
     <div className="h-screen flex bg-[#1e1e1e] text-[#cccccc] font-['Segoe_UI',Tahoma,Geneva,Verdana,sans-serif]">
@@ -169,7 +233,7 @@ export function LogosAIShell({ user }: LogosAIShellProps) {
               </div>
             </div>
 
-            {/* File Tree */}
+            {/* File Tree / Folder Tree */}
             <ScrollArea className="flex-1">
               <div className="p-1">
                 {activeCategory === "evidence" ? (
@@ -226,6 +290,15 @@ export function LogosAIShell({ user }: LogosAIShellProps) {
                       ))}
                     </div>
                   </div>
+                ) : activeCategory === "analytics" ? (
+                  <AnalyticsFolderTree
+                    folders={analyticsTestData.folders}
+                    onFolderSelect={handleFolderSelect}
+                    onFolderCreate={handleFolderCreate}
+                    onFolderRename={handleFolderRename}
+                    onFolderDelete={handleFolderDelete}
+                    selectedFolderId={selectedFolderId || undefined}
+                  />
                 ) : (
                   <div className="px-1 py-0.5 text-xs text-[#a1a1a1]">No files yet</div>
                 )}
@@ -262,6 +335,26 @@ export function LogosAIShell({ user }: LogosAIShellProps) {
                 expandedSources={expandedSources}
                 onToggleSource={handleToggleSource}
               />
+            ) : activeCategory === "analytics" ? (
+              isEditingAnalytics ? (
+                <AnalyticsEditor
+                  analytics={currentAnalytics}
+                  onSave={handleAnalyticsSave}
+                  onCancel={handleAnalyticsCancel}
+                />
+              ) : (
+                <AnalyticsList
+                  analytics={
+                    selectedFolderId
+                      ? analyticsTestData.analytics.filter((a) => a.folderId === selectedFolderId)
+                      : analyticsTestData.analytics
+                  }
+                  onSelect={handleAnalyticsSelect}
+                  onDelete={handleAnalyticsDelete}
+                  onDuplicate={handleAnalyticsDuplicate}
+                  sortBy="date"
+                />
+              )
             ) : (
               <div className="flex-1 flex items-center justify-center">
                 <div className="text-center">
@@ -388,3 +481,5 @@ export function LogosAIShell({ user }: LogosAIShellProps) {
     </div>
   )
 }
+
+</merged_code>
