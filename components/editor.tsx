@@ -47,6 +47,8 @@ export function Editor({ selectedEntry, activeCategory, mode = "prep-bank" }: Ed
   const [document, setDocument] = useState<Document | null>(null)
   const [documentContent, setDocumentContent] = useState("")
   const [documentTitle, setDocumentTitle] = useState("")
+  const [documentList, setDocumentList] = useState<Document[]>([])
+  const [showDocumentList, setShowDocumentList] = useState(false)
   const [showCardDropdown, setShowCardDropdown] = useState(false)
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 })
   const [searchTerm, setSearchTerm] = useState("")
@@ -111,8 +113,50 @@ export function Editor({ selectedEntry, activeCategory, mode = "prep-bank" }: Ed
   useEffect(() => {
     if (mode === "document-writer") {
       loadAvailableCards()
+      loadDocumentList()
     }
   }, [mode])
+
+  const loadDocumentList = async () => {
+    try {
+      const response = await fetch('/api/documents')
+      const result = await response.json()
+      
+      if (result.success) {
+        setDocumentList(result.data)
+      } else {
+        console.error("Failed to load documents:", result.error)
+      }
+    } catch (error) {
+      console.error("Error loading documents:", error)
+    }
+  }
+
+  const loadDocument = async (docId: string) => {
+    try {
+      const response = await fetch(`/api/documents/${docId}`)
+      const result = await response.json()
+      
+      if (result.success) {
+        const doc = result.data
+        setDocument(doc)
+        setDocumentTitle(doc.title)
+        setDocumentContent(doc.content)
+        setShowDocumentList(false)
+      } else {
+        console.error("Failed to load document:", result.error)
+      }
+    } catch (error) {
+      console.error("Error loading document:", error)
+    }
+  }
+
+  const createNewDocument = () => {
+    setDocument(null)
+    setDocumentTitle("")
+    setDocumentContent("")
+    setShowDocumentList(false)
+  }
 
   // Filter cards based on search term and reload from API if needed
   useEffect(() => {
@@ -250,9 +294,55 @@ EVIDENCE: ${card.evidence}
   }
 
   const saveDocument = async () => {
-    // Mock save - in real app, this would call API
-    console.log("Saving document:", { title: documentTitle, content: documentContent })
-    // Auto-save functionality would go here
+    if (!documentTitle || !documentContent) return
+    
+    try {
+      if (document) {
+        // Update existing document
+        const response = await fetch(`/api/documents/${document.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: documentTitle,
+            content: documentContent,
+            insertedCards: document.insertedCards,
+          }),
+        })
+        
+        const result = await response.json()
+        if (result.success) {
+          setDocument(result.data)
+          console.log("Document updated successfully")
+        } else {
+          console.error("Failed to update document:", result.error)
+        }
+      } else {
+        // Create new document
+        const response = await fetch('/api/documents', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: documentTitle,
+            content: documentContent,
+            documentType: 'notes', // Default to notes for MVP
+          }),
+        })
+        
+        const result = await response.json()
+        if (result.success) {
+          setDocument(result.data)
+          console.log("Document created successfully")
+        } else {
+          console.error("Failed to create document:", result.error)
+        }
+      }
+    } catch (error) {
+      console.error("Error saving document:", error)
+    }
   }
 
   // Auto-save effect
@@ -270,17 +360,56 @@ EVIDENCE: ${card.evidence}
         {/* Header */}
         <div className="border-b p-4 space-y-3">
           <div className="flex items-center gap-4">
-            <Input
-              value={documentTitle}
-              onChange={(e) => setDocumentTitle(e.target.value)}
-              placeholder="Document title..."
-              className="text-lg font-semibold"
-            />
+            <div className="relative flex-1">
+              <Input
+                value={documentTitle}
+                onChange={(e) => setDocumentTitle(e.target.value)}
+                placeholder="Document title..."
+                className="text-lg font-semibold"
+              />
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => setShowDocumentList(!showDocumentList)}
+            >
+              <FileText className="h-4 w-4 mr-1" />
+              Documents
+            </Button>
+            <Button variant="outline" onClick={createNewDocument}>
+              New
+            </Button>
             <Button onClick={saveDocument}>
               <Save className="h-4 w-4 mr-1" />
               Save
             </Button>
           </div>
+          
+          {/* Document List Dropdown */}
+          {showDocumentList && (
+            <div className="absolute right-4 top-16 bg-[#252526] border border-[#37373d] rounded shadow-lg z-20 w-80 max-h-60 overflow-y-auto">
+              {documentList.length > 0 ? (
+                documentList.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="p-3 hover:bg-[#37373d] cursor-pointer border-b border-[#37373d] last:border-b-0"
+                    onClick={() => loadDocument(doc.id)}
+                  >
+                    <div className="font-medium text-[#cccccc] text-sm">{doc.title}</div>
+                    <div className="text-[#a1a1a1] text-xs mt-1">
+                      {doc.documentType} • {new Date(doc.updatedAt).toLocaleDateString()}
+                    </div>
+                    <div className="text-[#858585] text-xs mt-1 truncate">
+                      {doc.content.substring(0, 100)}...
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-3 text-[#a1a1a1] text-sm">
+                  No documents found. Create your first document!
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Document Editor */}
