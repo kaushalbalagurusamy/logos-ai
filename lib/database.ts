@@ -37,6 +37,7 @@ const mockDatabase: Record<string, DatabaseRow[]> = {
   tags: [],
   case_templates: [],
   rounds: [],
+  documents: [],
 }
 
 /**

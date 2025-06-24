@@ -74,6 +74,27 @@ export interface EvidenceCard {
   source?: Source
 }
 
+// Formatting types shared across components
+export interface FormattingData {
+  emphasis: Array<{
+    start: number
+    end: number
+    style: "bold-underline"
+    font: string
+    size: number
+  }>
+  highlights: Array<{
+    start: number
+    end: number
+    color: "pastel-blue" | "pastel-pink" | "pastel-green" | "pastel-yellow"
+  }>
+  minimized: Array<{
+    start: number
+    end: number
+    size: number
+  }>
+}
+
 // Analytics types
 export interface Analytics {
   id: string
@@ -91,6 +112,7 @@ export interface Analytics {
     bold: boolean
     italic: boolean
   }
+  formattingData?: FormattingData // Rich text formatting for content
   tags: string[]
   version: number
   userId: string
@@ -193,6 +215,30 @@ export interface Round {
   notes: string
   userId: string
   createdAt: Date
+}
+
+// Document Writer types
+export interface Document {
+  id: string
+  title: string
+  content: string
+  documentType: "case" | "brief" | "notes"
+  insertedCards: Array<{
+    id: string
+    cardId: string
+    position: number
+    insertedAt: Date
+  }>
+  createdAt: Date
+  updatedAt: Date
+  userId: string
+}
+
+export interface DocumentInsertedCard {
+  id: string
+  cardId: string
+  position: number
+  insertedAt: Date
 }
 
 // AI service types
