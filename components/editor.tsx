@@ -52,6 +52,7 @@ export function Editor({ selectedEntry, activeCategory, mode = "prep-bank" }: Ed
   const [searchTerm, setSearchTerm] = useState("")
   const [availableCards, setAvailableCards] = useState<EvidenceCard[]>([])
   const [filteredCards, setFilteredCards] = useState<EvidenceCard[]>([])
+  const [selectedCardIndex, setSelectedCardIndex] = useState(0)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // Mock data - in real app, this would come from API
@@ -90,31 +91,21 @@ export function Editor({ selectedEntry, activeCategory, mode = "prep-bank" }: Ed
   }
 
   // Document writer functions
-  const loadAvailableCards = async () => {
-    // Mock data - in real app, this would fetch from API
-    const mockCards: EvidenceCard[] = [
-      {
-        id: "card-1",
-        sourceId: "source-1",
-        tagLine: "Climate change causes economic damage",
-        evidence: "Climate change will cost the global economy $43 trillion by 2100 if current trends continue, with developing nations bearing disproportionate burden.",
-        shorthand: "Econ Impact",
-        userId: "user-123",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        id: "card-2", 
-        sourceId: "source-1",
-        tagLine: "Renewable energy creates jobs",
-        evidence: "The renewable energy sector employed 13.7 million people worldwide in 2022, representing a 1 million increase from the previous year.",
-        shorthand: "Jobs",
-        userId: "user-123",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    ]
-    setAvailableCards(mockCards)
+  const loadAvailableCards = async (searchQuery = "") => {
+    try {
+      const response = await fetch(`/api/evidence-cards/search?q=${encodeURIComponent(searchQuery)}`)
+      const result = await response.json()
+      
+      if (result.success) {
+        setAvailableCards(result.data)
+      } else {
+        console.error("Failed to load cards:", result.error)
+        setAvailableCards([])
+      }
+    } catch (error) {
+      console.error("Error loading cards:", error)
+      setAvailableCards([])
+    }
   }
 
   useEffect(() => {
@@ -123,18 +114,26 @@ export function Editor({ selectedEntry, activeCategory, mode = "prep-bank" }: Ed
     }
   }, [mode])
 
-  // Filter cards based on search term
+  // Filter cards based on search term and reload from API if needed
   useEffect(() => {
-    if (searchTerm) {
-      const filtered = availableCards.filter(card => 
-        card.tagLine.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        card.shorthand?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-      setFilteredCards(filtered)
-    } else {
-      setFilteredCards(availableCards)
+    const searchCards = async () => {
+      if (searchTerm) {
+        // Reload cards with search term
+        await loadAvailableCards(searchTerm)
+      } else {
+        setFilteredCards(availableCards)
+      }
     }
-  }, [searchTerm, availableCards])
+    
+    if (showCardDropdown) {
+      searchCards()
+    }
+  }, [searchTerm, showCardDropdown])
+
+  // Update filtered cards when available cards change
+  useEffect(() => {
+    setFilteredCards(availableCards)
+  }, [availableCards])
 
   const handleDocumentContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value
@@ -156,6 +155,7 @@ export function Editor({ selectedEntry, activeCategory, mode = "prep-bank" }: Ed
       })
       setShowCardDropdown(true)
       setSearchTerm("")
+      setSelectedCardIndex(0)
     } else if (showCardDropdown) {
       // Update search term if dropdown is showing
       const lastSlashIndex = value.lastIndexOf('/', cursorPosition)
@@ -182,10 +182,28 @@ export function Editor({ selectedEntry, activeCategory, mode = "prep-bank" }: Ed
     // Find the slash position
     const lastSlashIndex = content.lastIndexOf('/', cursorPosition)
     
-    // Format the card content
-    const cardContent = `TAG: ${card.tagLine}
+    // Format date for citation
+    const formatDate = (date: Date | undefined) => {
+      if (!date) return "No Date"
+      return new Date(date).getFullYear().toString()
+    }
+    
+    // Build citation based on source info
+    let citation = "No Citation"
+    if (card.source) {
+      const source = card.source
+      citation = `${source.author || "No Author"} ${formatDate(source.date)}`
+      if (source.publication) {
+        citation += ` (${source.publication})`
+      }
+    }
+    
+    // Format the complete card content with proper structure
+    const cardContent = `
+TAG: ${card.tagLine}
 ${card.shorthand ? `SHORTHAND: ${card.shorthand}` : ''}
-${card.evidence}
+AUTHOR: ${citation}
+EVIDENCE: ${card.evidence}
 
 `
     
@@ -195,6 +213,14 @@ ${card.evidence}
     setDocumentContent(newContent)
     setShowCardDropdown(false)
     setSearchTerm("")
+    
+    // Track inserted card for document metadata
+    const insertedCard = {
+      id: `insert-${Date.now()}`,
+      cardId: card.id,
+      position: lastSlashIndex,
+      insertedAt: new Date(),
+    }
     
     // Focus back to textarea and position cursor after inserted content
     setTimeout(() => {
@@ -209,9 +235,16 @@ ${card.evidence}
       if (e.key === 'Escape') {
         setShowCardDropdown(false)
         setSearchTerm("")
+        setSelectedCardIndex(0)
       } else if (e.key === 'Enter' && filteredCards.length > 0) {
         e.preventDefault()
-        insertCard(filteredCards[0])
+        insertCard(filteredCards[selectedCardIndex])
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setSelectedCardIndex(prev => Math.min(prev + 1, filteredCards.length - 1))
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setSelectedCardIndex(prev => Math.max(prev - 1, 0))
       }
     }
   }
@@ -269,10 +302,12 @@ ${card.evidence}
               style={{ top: dropdownPosition.top, left: dropdownPosition.left }}
             >
               {filteredCards.length > 0 ? (
-                filteredCards.map((card) => (
+                filteredCards.map((card, index) => (
                   <div
                     key={card.id}
-                    className="p-3 hover:bg-[#37373d] cursor-pointer border-b border-[#37373d] last:border-b-0"
+                    className={`p-3 cursor-pointer border-b border-[#37373d] last:border-b-0 ${
+                      index === selectedCardIndex ? 'bg-[#37373d]' : 'hover:bg-[#37373d]'
+                    }`}
                     onClick={() => insertCard(card)}
                   >
                     <div className="font-medium text-[#cccccc] text-sm">{card.tagLine}</div>
