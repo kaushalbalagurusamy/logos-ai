@@ -1,17 +1,20 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Save, Copy, ExternalLink, FileText, Quote, BarChart3, BookOpen, Tag, Calendar, User } from "lucide-react"
+import type { FormattingData, Document, EvidenceCard } from "@/lib/types"
 
 interface EditorProps {
   selectedEntry: string | null
-  activeCategory: "evidence" | "cases" | "analytics" | "speeches"
+  activeCategory: "evidence" | "cases" | "analytics" | "speeches" | "documents"
+  mode?: "prep-bank" | "document-writer"
 }
 
 interface PrepBankEntry {
@@ -32,11 +35,24 @@ interface PrepBankEntry {
   content?: string
   // Definition-specific fields
   definition_text?: string
+  // Formatting data for rich text fields
+  formattingData?: FormattingData
 }
 
-export function Editor({ selectedEntry, activeCategory }: EditorProps) {
+export function Editor({ selectedEntry, activeCategory, mode = "prep-bank" }: EditorProps) {
   const [entry, setEntry] = useState<PrepBankEntry | null>(null)
   const [isEditing, setIsEditing] = useState(false)
+  
+  // Document writer state
+  const [document, setDocument] = useState<Document | null>(null)
+  const [documentContent, setDocumentContent] = useState("")
+  const [documentTitle, setDocumentTitle] = useState("")
+  const [showCardDropdown, setShowCardDropdown] = useState(false)
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 })
+  const [searchTerm, setSearchTerm] = useState("")
+  const [availableCards, setAvailableCards] = useState<EvidenceCard[]>([])
+  const [filteredCards, setFilteredCards] = useState<EvidenceCard[]>([])
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // Mock data - in real app, this would come from API
   useEffect(() => {
@@ -71,6 +87,213 @@ export function Editor({ selectedEntry, activeCategory }: EditorProps) {
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text)
+  }
+
+  // Document writer functions
+  const loadAvailableCards = async () => {
+    // Mock data - in real app, this would fetch from API
+    const mockCards: EvidenceCard[] = [
+      {
+        id: "card-1",
+        sourceId: "source-1",
+        tagLine: "Climate change causes economic damage",
+        evidence: "Climate change will cost the global economy $43 trillion by 2100 if current trends continue, with developing nations bearing disproportionate burden.",
+        shorthand: "Econ Impact",
+        userId: "user-123",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: "card-2", 
+        sourceId: "source-1",
+        tagLine: "Renewable energy creates jobs",
+        evidence: "The renewable energy sector employed 13.7 million people worldwide in 2022, representing a 1 million increase from the previous year.",
+        shorthand: "Jobs",
+        userId: "user-123",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ]
+    setAvailableCards(mockCards)
+  }
+
+  useEffect(() => {
+    if (mode === "document-writer") {
+      loadAvailableCards()
+    }
+  }, [mode])
+
+  // Filter cards based on search term
+  useEffect(() => {
+    if (searchTerm) {
+      const filtered = availableCards.filter(card => 
+        card.tagLine.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        card.shorthand?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      setFilteredCards(filtered)
+    } else {
+      setFilteredCards(availableCards)
+    }
+  }, [searchTerm, availableCards])
+
+  const handleDocumentContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value
+    const cursorPosition = e.target.selectionStart
+    
+    setDocumentContent(value)
+    
+    // Check for slash command
+    if (value[cursorPosition - 1] === '/') {
+      const textarea = e.target
+      const rect = textarea.getBoundingClientRect()
+      const lineHeight = parseInt(window.getComputedStyle(textarea).lineHeight)
+      const textBeforeCursor = value.substring(0, cursorPosition)
+      const lineNumber = textBeforeCursor.split('\n').length - 1
+      
+      setDropdownPosition({
+        top: rect.top + (lineNumber * lineHeight) + lineHeight + 5,
+        left: rect.left + 10
+      })
+      setShowCardDropdown(true)
+      setSearchTerm("")
+    } else if (showCardDropdown) {
+      // Update search term if dropdown is showing
+      const lastSlashIndex = value.lastIndexOf('/', cursorPosition)
+      if (lastSlashIndex !== -1 && lastSlashIndex < cursorPosition) {
+        const term = value.substring(lastSlashIndex + 1, cursorPosition)
+        if (term.includes(' ') || term.includes('\n')) {
+          setShowCardDropdown(false)
+        } else {
+          setSearchTerm(term)
+        }
+      } else {
+        setShowCardDropdown(false)
+      }
+    }
+  }
+
+  const insertCard = (card: EvidenceCard) => {
+    if (!textareaRef.current) return
+    
+    const textarea = textareaRef.current
+    const cursorPosition = textarea.selectionStart
+    const content = documentContent
+    
+    // Find the slash position
+    const lastSlashIndex = content.lastIndexOf('/', cursorPosition)
+    
+    // Format the card content
+    const cardContent = `TAG: ${card.tagLine}
+${card.shorthand ? `SHORTHAND: ${card.shorthand}` : ''}
+${card.evidence}
+
+`
+    
+    // Replace from slash to cursor with card content
+    const newContent = content.substring(0, lastSlashIndex) + cardContent + content.substring(cursorPosition)
+    
+    setDocumentContent(newContent)
+    setShowCardDropdown(false)
+    setSearchTerm("")
+    
+    // Focus back to textarea and position cursor after inserted content
+    setTimeout(() => {
+      textarea.focus()
+      const newCursorPosition = lastSlashIndex + cardContent.length
+      textarea.setSelectionRange(newCursorPosition, newCursorPosition)
+    }, 0)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (showCardDropdown) {
+      if (e.key === 'Escape') {
+        setShowCardDropdown(false)
+        setSearchTerm("")
+      } else if (e.key === 'Enter' && filteredCards.length > 0) {
+        e.preventDefault()
+        insertCard(filteredCards[0])
+      }
+    }
+  }
+
+  const saveDocument = async () => {
+    // Mock save - in real app, this would call API
+    console.log("Saving document:", { title: documentTitle, content: documentContent })
+    // Auto-save functionality would go here
+  }
+
+  // Auto-save effect
+  useEffect(() => {
+    if (documentContent && mode === "document-writer") {
+      const timer = setTimeout(saveDocument, 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [documentContent, documentTitle])
+
+  // Document writer mode
+  if (mode === "document-writer") {
+    return (
+      <div className="h-full flex flex-col">
+        {/* Header */}
+        <div className="border-b p-4 space-y-3">
+          <div className="flex items-center gap-4">
+            <Input
+              value={documentTitle}
+              onChange={(e) => setDocumentTitle(e.target.value)}
+              placeholder="Document title..."
+              className="text-lg font-semibold"
+            />
+            <Button onClick={saveDocument}>
+              <Save className="h-4 w-4 mr-1" />
+              Save
+            </Button>
+          </div>
+        </div>
+
+        {/* Document Editor */}
+        <div className="flex-1 relative">
+          <Textarea
+            ref={textareaRef}
+            value={documentContent}
+            onChange={handleDocumentContentChange}
+            onKeyDown={handleKeyDown}
+            placeholder="Start typing your document... Type '/' to insert evidence cards"
+            className="w-full h-full border-none resize-none focus:outline-none"
+            style={{ fontFamily: 'monospace', fontSize: '14px', lineHeight: '1.5' }}
+          />
+          
+          {/* Evidence Card Dropdown */}
+          {showCardDropdown && (
+            <div
+              className="absolute bg-[#252526] border border-[#37373d] rounded shadow-lg z-10 max-h-60 overflow-y-auto min-w-80"
+              style={{ top: dropdownPosition.top, left: dropdownPosition.left }}
+            >
+              {filteredCards.length > 0 ? (
+                filteredCards.map((card) => (
+                  <div
+                    key={card.id}
+                    className="p-3 hover:bg-[#37373d] cursor-pointer border-b border-[#37373d] last:border-b-0"
+                    onClick={() => insertCard(card)}
+                  >
+                    <div className="font-medium text-[#cccccc] text-sm">{card.tagLine}</div>
+                    {card.shorthand && (
+                      <div className="text-[#a1a1a1] text-xs mt-1">{card.shorthand}</div>
+                    )}
+                    <div className="text-[#858585] text-xs mt-1 truncate">
+                      {card.evidence.substring(0, 100)}...
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-3 text-[#a1a1a1] text-sm">
+                  No cards found matching "{searchTerm}"
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    )
   }
 
   if (!selectedEntry || !entry) {
@@ -165,11 +388,17 @@ export function Editor({ selectedEntry, activeCategory }: EditorProps) {
                     </Button>
                   </div>
                   {isEditing ? (
-                    <Textarea
+                    <RichTextEditor
                       value={entry.quote_text || ""}
-                      onChange={(e) => setEntry({ ...entry, quote_text: e.target.value })}
-                      className="min-h-[120px]"
+                      onChange={(value) => setEntry({ ...entry, quote_text: value })}
+                      formattingData={entry.formattingData}
+                      onFormattingChange={(formatting) => setEntry({ ...entry, formattingData: formatting })}
+                      minHeight="min-h-[120px]"
                       placeholder="Enter the quote text..."
+                      enableFormatting={true}
+                      enableHighlighting={true}
+                      enableMinimize={true}
+                      showCharacterCount={true}
                     />
                   ) : (
                     <div className="p-3 bg-muted/50 rounded-lg border-l-4 border-primary">
@@ -181,10 +410,12 @@ export function Editor({ selectedEntry, activeCategory }: EditorProps) {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Summary</label>
                   {isEditing ? (
-                    <Textarea
+                    <RichTextEditor
                       value={entry.summary}
-                      onChange={(e) => setEntry({ ...entry, summary: e.target.value })}
+                      onChange={(value) => setEntry({ ...entry, summary: value })}
                       placeholder="Enter summary..."
+                      enableFormatting={false}
+                      showCharacterCount={true}
                     />
                   ) : (
                     <p className="text-sm text-muted-foreground">{entry.summary}</p>
@@ -196,10 +427,12 @@ export function Editor({ selectedEntry, activeCategory }: EditorProps) {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">MLA Citation</label>
                   {isEditing ? (
-                    <Textarea
+                    <RichTextEditor
                       value={entry.mla_citation || ""}
-                      onChange={(e) => setEntry({ ...entry, mla_citation: e.target.value })}
+                      onChange={(value) => setEntry({ ...entry, mla_citation: value })}
                       placeholder="Enter MLA citation..."
+                      enableFormatting={false}
+                      showCharacterCount={true}
                     />
                   ) : (
                     <div className="p-3 bg-muted/50 rounded-lg">
@@ -231,10 +464,12 @@ export function Editor({ selectedEntry, activeCategory }: EditorProps) {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Author Qualifications</label>
                   {isEditing ? (
-                    <Textarea
+                    <RichTextEditor
                       value={entry.author_qualifications || ""}
-                      onChange={(e) => setEntry({ ...entry, author_qualifications: e.target.value })}
+                      onChange={(value) => setEntry({ ...entry, author_qualifications: value })}
                       placeholder="Enter author qualifications..."
+                      enableFormatting={false}
+                      showCharacterCount={true}
                     />
                   ) : (
                     <p className="text-sm text-muted-foreground">{entry.author_qualifications}</p>
@@ -246,11 +481,15 @@ export function Editor({ selectedEntry, activeCategory }: EditorProps) {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Warrant Analysis</label>
                   {isEditing ? (
-                    <Textarea
+                    <RichTextEditor
                       value={entry.warrant_text || ""}
-                      onChange={(e) => setEntry({ ...entry, warrant_text: e.target.value })}
-                      className="min-h-[120px]"
+                      onChange={(value) => setEntry({ ...entry, warrant_text: value })}
+                      minHeight="min-h-[120px]"
                       placeholder="Enter warrant analysis..."
+                      enableFormatting={true}
+                      enableHighlighting={true}
+                      enableMinimize={true}
+                      showCharacterCount={true}
                     />
                   ) : (
                     <div className="p-3 bg-muted/50 rounded-lg">
@@ -272,10 +511,12 @@ export function Editor({ selectedEntry, activeCategory }: EditorProps) {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Summary</label>
                 {isEditing ? (
-                  <Textarea
+                  <RichTextEditor
                     value={entry.summary}
-                    onChange={(e) => setEntry({ ...entry, summary: e.target.value })}
+                    onChange={(value) => setEntry({ ...entry, summary: value })}
                     placeholder="Enter summary..."
+                    enableFormatting={false}
+                    showCharacterCount={true}
                   />
                 ) : (
                   <p className="text-sm text-muted-foreground">{entry.summary}</p>
@@ -285,11 +526,15 @@ export function Editor({ selectedEntry, activeCategory }: EditorProps) {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Content</label>
                 {isEditing ? (
-                  <Textarea
+                  <RichTextEditor
                     value={entry.content || ""}
-                    onChange={(e) => setEntry({ ...entry, content: e.target.value })}
-                    className="min-h-[200px]"
+                    onChange={(value) => setEntry({ ...entry, content: value })}
+                    minHeight="min-h-[200px]"
                     placeholder="Enter analytics content..."
+                    enableFormatting={true}
+                    enableHighlighting={true}
+                    enableMinimize={true}
+                    showCharacterCount={true}
                   />
                 ) : (
                   <div className="p-3 bg-muted/50 rounded-lg">
@@ -310,10 +555,12 @@ export function Editor({ selectedEntry, activeCategory }: EditorProps) {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Summary</label>
                 {isEditing ? (
-                  <Textarea
+                  <RichTextEditor
                     value={entry.summary}
-                    onChange={(e) => setEntry({ ...entry, summary: e.target.value })}
+                    onChange={(value) => setEntry({ ...entry, summary: value })}
                     placeholder="Enter summary..."
+                    enableFormatting={false}
+                    showCharacterCount={true}
                   />
                 ) : (
                   <p className="text-sm text-muted-foreground">{entry.summary}</p>
@@ -323,11 +570,15 @@ export function Editor({ selectedEntry, activeCategory }: EditorProps) {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Definition Text</label>
                 {isEditing ? (
-                  <Textarea
+                  <RichTextEditor
                     value={entry.definition_text || ""}
-                    onChange={(e) => setEntry({ ...entry, definition_text: e.target.value })}
-                    className="min-h-[120px]"
+                    onChange={(value) => setEntry({ ...entry, definition_text: value })}
+                    minHeight="min-h-[120px]"
                     placeholder="Enter definition..."
+                    enableFormatting={true}
+                    enableHighlighting={true}
+                    enableMinimize={true}
+                    showCharacterCount={true}
                   />
                 ) : (
                   <div className="p-3 bg-muted/50 rounded-lg border-l-4 border-blue-500">
