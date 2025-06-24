@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Search, Plus, LinkIcon, FileText, StickyNote, Trash2 } from "lucide-react"
 import type { AnalyticsLink, Source, EvidenceCard } from "@/lib/types"
@@ -248,12 +248,14 @@ function LinkDialog({ isOpen, onClose, onCreateLink, analyticsId }: LinkDialogPr
           {/* Description */}
           <div>
             <label className="block text-sm font-medium mb-2">Description (Optional):</label>
-            <Textarea
+            <RichTextEditor
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(value) => setDescription(value)}
               placeholder="Describe the relationship..."
+              enableFormatting={false}
+              showCharacterCount={true}
+              minHeight="min-h-[60px]"
               className="bg-[#3c3c3c] border-[#3e3e42]"
-              rows={3}
             />
           </div>
 

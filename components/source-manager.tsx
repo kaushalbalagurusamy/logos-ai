@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -35,28 +35,8 @@ import {
   X,
   BookOpen,
 } from "lucide-react"
-import { EvidenceEditor } from "./evidence-editor"
 import { ipccAR6Data } from "./test-data"
-
-interface FormattingData {
-  emphasis: Array<{
-    start: number
-    end: number
-    style: "bold-underline"
-    font: string
-    size: number
-  }>
-  highlights: Array<{
-    start: number
-    end: number
-    color: "pastel-blue" | "pastel-pink" | "pastel-green" | "pastel-yellow"
-  }>
-  minimized: Array<{
-    start: number
-    end: number
-    size: number
-  }>
-}
+import type { FormattingData } from "@/lib/types"
 
 interface EvidenceCard {
   id: string
@@ -769,15 +749,17 @@ export function SourceManager({
                         <Label htmlFor="authorQualifications" className="text-xs font-medium text-[#cccccc]">
                           Author Qualifications
                         </Label>
-                        <Textarea
-                          id="authorQualifications"
+                        <RichTextEditor
                           value={
                             isEditing ? formData.authorQualifications || "" : selectedSource?.authorQualifications || ""
                           }
-                          onChange={(e) => handleFormChange("authorQualifications", e.target.value)}
+                          onChange={(value) => handleFormChange("authorQualifications", value)}
                           disabled={!isEditing}
-                          className="mt-1 min-h-[80px] bg-[#2d2d30] border-[#37373d] text-[#cccccc] text-sm resize-none"
+                          minHeight="min-h-[80px]"
                           placeholder="Describe the author's credentials and expertise"
+                          enableFormatting={false}
+                          showCharacterCount={true}
+                          className="mt-1"
                         />
                       </div>
 
@@ -785,13 +767,15 @@ export function SourceManager({
                         <Label htmlFor="studyMethodology" className="text-xs font-medium text-[#cccccc]">
                           Study Methodology
                         </Label>
-                        <Textarea
-                          id="studyMethodology"
+                        <RichTextEditor
                           value={isEditing ? formData.studyMethodology || "" : selectedSource?.studyMethodology || ""}
-                          onChange={(e) => handleFormChange("studyMethodology", e.target.value)}
+                          onChange={(value) => handleFormChange("studyMethodology", value)}
                           disabled={!isEditing}
-                          className="mt-1 min-h-[80px] bg-[#2d2d30] border-[#37373d] text-[#cccccc] text-sm resize-none"
+                          minHeight="min-h-[80px]"
                           placeholder="Describe the research methodology used"
+                          enableFormatting={false}
+                          showCharacterCount={true}
+                          className="mt-1"
                         />
                       </div>
                     </div>
@@ -888,14 +872,18 @@ export function SourceManager({
                         </Label>
                         <span className="text-xs text-[#a1a1a1]">{cardFormData.evidence?.length || 0} characters</span>
                       </div>
-                      <Textarea
-                        id="cardEvidence"
+                      <RichTextEditor
                         value={cardFormData.evidence || ""}
-                        onChange={(e) => handleCardFormChange("evidence", e.target.value)}
-                        className={`mt-1 min-h-[300px] bg-[#2d2d30] border-[#37373d] text-[#cccccc] text-sm resize-none ${
+                        onChange={(value) => handleCardFormChange("evidence", value)}
+                        minHeight="min-h-[300px]"
+                        placeholder="Enter the evidence text here..."
+                        enableFormatting={true}
+                        enableHighlighting={true}
+                        enableMinimize={true}
+                        showCharacterCount={true}
+                        className={`mt-1 ${
                           validationErrors.evidence ? "border-[#d16969]" : ""
                         }`}
-                        placeholder="Enter the evidence text here..."
                       />
                       {validationErrors.evidence && (
                         <p className="text-xs text-[#d16969] mt-1">{validationErrors.evidence}</p>
@@ -923,14 +911,72 @@ export function SourceManager({
                   </div>
                 </div>
               ) : selectedCard ? (
-                // Card Editor
-                <EvidenceEditor
-                  key={selectedCard.id}
-                  card={selectedCard}
-                  userPreferences={user.preferences || {}}
-                  onCardChange={autoSaveCard}
-                  onDelete={handleDeleteCard}
-                />
+                // Card Editor - Using centralized RichTextEditor
+                <div className="h-full flex flex-col bg-[#1e1e1e]">
+                  {/* Header */}
+                  <div className="border-b border-[#37373d] px-4 py-2 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="text-sm font-medium text-[#cccccc]">{selectedCard.tagLine}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-[#a1a1a1]">
+                        {selectedCard.evidence.length} characters
+                      </span>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-1 text-[#d16969] hover:bg-[#d16969]/20 hover:text-[#d16969]"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="bg-[#252526] border-[#37373d] text-[#cccccc]">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Evidence Card</AlertDialogTitle>
+                            <AlertDialogDescription className="text-[#a1a1a1]">
+                              Are you sure you want to delete this card? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel className="border-[#37373d] bg-[#2d2d30] text-[#cccccc] hover:bg-[#37373d]">
+                              Cancel
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeleteCard(selectedCard.id)}
+                              className="bg-[#d16969] hover:bg-[#b85450] text-white"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
+
+                  {/* Editor */}
+                  <div className="flex-1 p-4">
+                    <RichTextEditor
+                      value={selectedCard.evidence}
+                      onChange={(value) => autoSaveCard({ evidence: value })}
+                      formattingData={selectedCard.formattingData}
+                      onFormattingChange={(formatting) => autoSaveCard({ formattingData: formatting })}
+                      placeholder="Enter evidence text..."
+                      minHeight="min-h-[400px]"
+                      className="h-full"
+                      enableFormatting={true}
+                      enableHighlighting={true}
+                      enableMinimize={true}
+                      enableAutoSave={true}
+                      autoSaveInterval={500}
+                      showCharacterCount={false}
+                      emphasisFont={user.preferences?.emphasisFont || "Times New Roman"}
+                      emphasisSize={user.preferences?.emphasisSize || 12}
+                      minimizeSize={user.preferences?.minimizeSize || 6}
+                    />
+                  </div>
+                </div>
               ) : (
                 // No card selected
                 <div className="flex-1 flex items-center justify-center">

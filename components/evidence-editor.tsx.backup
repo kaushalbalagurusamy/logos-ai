@@ -134,7 +134,11 @@ export function EvidenceEditor({ card, userPreferences, onCardChange, onDelete }
       minimizedRanges.push({ start: lastEmphasizedEnd, end: card.evidence.length, size: defaultPrefs.minimizeSize })
     }
 
-    onCardChange({ formattingData: { ...card.formattingData, minimized: minimizedRanges } })
+    onCardChange({ formattingData: { 
+      emphasis: card.formattingData?.emphasis || [],
+      highlights: card.formattingData?.highlights || [],
+      minimized: minimizedRanges 
+    } })
   }
 
   const handleInput = () => {

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -244,18 +244,20 @@ export default function AnalyticsEditor({
             <label className="block text-sm font-medium">Content</label>
             <span className="text-xs text-[#858585]">{getCharacterCount().toLocaleString()} characters</span>
           </div>
-          <Textarea
-            ref={contentRef}
+          <RichTextEditor
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={(value) => setContent(value)}
             placeholder="Enter your analytical content..."
-            className="min-h-[400px] bg-[#3c3c3c] border-[#3e3e42] text-[#cccccc] placeholder-[#858585] resize-none"
-            style={{
-              fontFamily: formatting.font,
-              fontSize: `${formatting.size}px`,
-              fontWeight: formatting.bold ? "bold" : "normal",
-              fontStyle: formatting.italic ? "italic" : "normal",
-            }}
+            minHeight="min-h-[400px]"
+            enableFormatting={true}
+            enableHighlighting={true}
+            enableMinimize={true}
+            enableAutoSave={true}
+            autoSaveInterval={3000}
+            showCharacterCount={true}
+            emphasisFont={formatting.font}
+            emphasisSize={formatting.size}
+            className="bg-[#3c3c3c] border-[#3e3e42]"
           />
         </div>
 
@@ -265,11 +267,15 @@ export default function AnalyticsEditor({
             <label className="block text-sm font-medium">Summary (Optional)</label>
             <span className="text-xs text-[#858585]">{getSummaryCharacterCount()}/200 characters</span>
           </div>
-          <Textarea
+          <RichTextEditor
             value={summary}
-            onChange={(e) => setSummary(e.target.value.slice(0, 200))}
+            onChange={(value) => setSummary(value.slice(0, 200))}
             placeholder="Brief summary of the analytics..."
-            className="h-20 bg-[#3c3c3c] border-[#3e3e42] text-[#cccccc] placeholder-[#858585]"
+            minHeight="h-20"
+            enableFormatting={false}
+            showCharacterCount={true}
+            characterLimit={200}
+            className="bg-[#3c3c3c] border-[#3e3e42]"
           />
         </div>
 
