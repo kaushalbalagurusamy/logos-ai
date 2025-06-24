@@ -176,4 +176,3 @@ export default function AnalyticsList({ analytics, onSelect, onDelete, onDuplica
     </div>
   )
 }
-</merged_code>

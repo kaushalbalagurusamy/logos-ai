@@ -199,8 +199,24 @@ export class SourceService extends BaseService {
 
   async deleteSource(id: string, userId: string): Promise<boolean> {
     try {
-      const query = `DELETE FROM sources WHERE id = $1 AND user_id = $2`
-      const result = await executeQuery(query, [id, userId])
+      // First check if source exists and belongs to user
+      const existingSource = await this.getSourceById(id, userId)
+      if (!existingSource) {
+        return false
+      }
+
+      // Delete associated evidence cards first
+      await executeQuery(
+        "DELETE FROM evidence_cards WHERE source_id = $1 AND user_id = $2",
+        [id, userId]
+      )
+
+      // Delete the source
+      const result = await executeQuery(
+        "DELETE FROM sources WHERE id = $1 AND user_id = $2",
+        [id, userId]
+      )
+
       return result.rowCount > 0
     } catch (error) {
       console.error("Error deleting source:", error)
@@ -208,6 +224,9 @@ export class SourceService extends BaseService {
     }
   }
 
+  /**
+   * Maps database row to Source domain object
+   */
   private mapRowToSource(row: any): Source {
     return {
       id: row.id,

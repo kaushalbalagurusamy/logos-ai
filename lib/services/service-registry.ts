@@ -1,4 +1,5 @@
 import { AIService } from "./ai-service"
+import { AnalyticsService } from "./analytics-service"
 import { AuthService } from "./auth-service"
 import { CaseBuilderService } from "./casebuilder-service"
 import { EvidenceCardService } from "./evidence-card-service"
@@ -10,6 +11,7 @@ class ServiceRegistry {
   private static instance: ServiceRegistry
 
   public readonly ai: AIService
+  public readonly analytics: AnalyticsService
   public readonly auth: AuthService
   public readonly caseBuilder: CaseBuilderService
   public readonly evidenceCards: EvidenceCardService
@@ -19,6 +21,7 @@ class ServiceRegistry {
 
   private constructor() {
     this.ai = new AIService()
+    this.analytics = new AnalyticsService()
     this.auth = new AuthService()
     this.caseBuilder = new CaseBuilderService()
     this.evidenceCards = new EvidenceCardService()

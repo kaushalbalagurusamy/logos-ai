@@ -352,7 +352,6 @@ export function LogosAIShell({ user }: LogosAIShellProps) {
                   onSelect={handleAnalyticsSelect}
                   onDelete={handleAnalyticsDelete}
                   onDuplicate={handleAnalyticsDuplicate}
-                  sortBy="date"
                 />
               )
             ) : (
@@ -481,5 +480,3 @@ export function LogosAIShell({ user }: LogosAIShellProps) {
     </div>
   )
 }
-
-</merged_code>
