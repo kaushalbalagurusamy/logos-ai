@@ -46,9 +46,15 @@ export function DocumentEditor({ documentId, onDocumentDeleted }: DocumentEditor
     }
   }, [documentId])
 
-  // Auto-save functionality
-  const autoSave = useCallback(
-    debounce(async (newTitle: string, newContent: string) => {
+  // Track changes for auto-save
+  useEffect(() => {
+    if (!document || (title === document.title && content === document.content)) {
+      return
+    }
+
+    setSaveStatus("unsaved")
+    
+    const autoSave = debounce(async (newTitle: string, newContent: string) => {
       if (!document || (!newTitle.trim() && !newContent.trim())) return
       
       setSaveStatus("saving")
@@ -59,17 +65,10 @@ export function DocumentEditor({ documentId, onDocumentDeleted }: DocumentEditor
         console.error("Auto-save failed:", error)
         setSaveStatus("unsaved")
       }
-    }, 2000),
-    [document]
-  )
+    }, 2000)
 
-  // Track changes for auto-save
-  useEffect(() => {
-    if (document && (title !== document.title || content !== document.content)) {
-      setSaveStatus("unsaved")
-      autoSave(title, content)
-    }
-  }, [title, content, document, autoSave])
+    autoSave(title, content)
+  }, [title, content, document])
 
   const loadDocument = async () => {
     try {
@@ -89,7 +88,7 @@ export function DocumentEditor({ documentId, onDocumentDeleted }: DocumentEditor
     }
   }
 
-  const saveDocument = async (newTitle: string, newContent: string) => {
+  const saveDocument = useCallback(async (newTitle: string, newContent: string) => {
     if (!document) return
 
     setSaving(true)
@@ -115,7 +114,7 @@ export function DocumentEditor({ documentId, onDocumentDeleted }: DocumentEditor
     } finally {
       setSaving(false)
     }
-  }
+  }, [document])
 
   const handleDelete = async () => {
     if (!document || !confirm("Are you sure you want to delete this document?")) return
