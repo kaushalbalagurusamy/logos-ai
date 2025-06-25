@@ -22,7 +22,7 @@ export class DocumentService extends BaseService {
    */
   async getDocuments(userId: string): Promise<Document[]> {
     const result = await executeQuery(
-      "SELECT * FROM documents WHERE userId = ? ORDER BY updatedAt DESC",
+      "SELECT * FROM documents WHERE user_id = $1 ORDER BY updated_at DESC",
       [userId]
     )
     return result.rows as Document[]
@@ -33,7 +33,7 @@ export class DocumentService extends BaseService {
    */
   async getDocumentFolders(userId: string): Promise<DocumentFolder[]> {
     const result = await executeQuery(
-      "SELECT * FROM document_folders WHERE userId = ? ORDER BY name ASC",
+      "SELECT * FROM document_folders WHERE user_id = $1 ORDER BY name ASC",
       [userId]
     )
     return result.rows as DocumentFolder[]
@@ -44,7 +44,7 @@ export class DocumentService extends BaseService {
    */
   async getDocument(documentId: string, userId: string): Promise<Document | null> {
     const result = await executeQuery(
-      "SELECT * FROM documents WHERE id = ? AND userId = ?",
+      "SELECT * FROM documents WHERE id = $1 AND user_id = $2",
       [documentId, userId]
     )
     return result.rows[0] as Document || null
@@ -73,8 +73,8 @@ export class DocumentService extends BaseService {
     }
 
     await executeQuery(
-      `INSERT INTO documents (id, title, content, folderId, embeddedCards, embeddedAnalytics, version, userId, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO documents (id, title, content, folder_id, embedded_cards, embedded_analytics, version, user_id, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
       [
         document.id,
         document.title,
@@ -112,9 +112,9 @@ export class DocumentService extends BaseService {
 
     await executeQuery(
       `UPDATE documents SET 
-        title = ?, content = ?, folderId = ?, embeddedCards = ?, embeddedAnalytics = ?, 
-        formattingData = ?, version = ?, updatedAt = ?
-       WHERE id = ? AND userId = ?`,
+        title = $1, content = $2, folder_id = $3, embedded_cards = $4, embedded_analytics = $5, 
+        formatting_data = $6, version = $7, updated_at = $8
+       WHERE id = $9 AND user_id = $10`,
       [
         updatedDocument.title,
         updatedDocument.content,
@@ -137,7 +137,7 @@ export class DocumentService extends BaseService {
    */
   async deleteDocument(documentId: string, userId: string): Promise<boolean> {
     const result = await executeQuery(
-      "DELETE FROM documents WHERE id = ? AND userId = ?",
+      "DELETE FROM documents WHERE id = $1 AND user_id = $2",
       [documentId, userId]
     )
     return result.rowCount > 0
@@ -162,8 +162,8 @@ export class DocumentService extends BaseService {
     }
 
     await executeQuery(
-      `INSERT INTO document_folders (id, name, parentId, userId, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO document_folders (id, name, parent_id, user_id, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
       [folder.id, folder.name, folder.parentId, folder.userId, folder.createdAt, folder.updatedAt]
     )
 
@@ -179,15 +179,15 @@ export class DocumentService extends BaseService {
     // Search evidence cards
     const cardsResult = await executeQuery(
       `SELECT ec.*, s.* FROM evidence_cards ec 
-       JOIN sources s ON ec.sourceId = s.id 
-       WHERE ec.userId = ? AND (
-         ec.tagLine LIKE ? OR 
-         ec.shorthand LIKE ? OR 
-         ec.evidence LIKE ? OR
-         s.title LIKE ? OR
-         s.author LIKE ?
+       JOIN sources s ON ec.source_id = s.id 
+       WHERE ec.user_id = $1 AND (
+         ec.tag_line LIKE $2 OR 
+         ec.shorthand LIKE $3 OR 
+         ec.evidence LIKE $4 OR
+         s.title LIKE $5 OR
+         s.author LIKE $6
        )
-       ORDER BY ec.updatedAt DESC
+       ORDER BY ec.updated_at DESC
        LIMIT 10`,
       [userId, `%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`]
     )
@@ -230,12 +230,12 @@ export class DocumentService extends BaseService {
     // Search analytics
     const analyticsResult = await executeQuery(
       `SELECT * FROM analytics 
-       WHERE userId = ? AND (
-         title LIKE ? OR 
-         content LIKE ? OR 
-         summary LIKE ?
+       WHERE user_id = $1 AND (
+         title LIKE $2 OR 
+         content LIKE $3 OR 
+         summary LIKE $4
        )
-       ORDER BY updatedAt DESC
+       ORDER BY updated_at DESC
        LIMIT 10`,
       [userId, `%${query}%`, `%${query}%`, `%${query}%`]
     )

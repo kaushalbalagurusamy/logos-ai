@@ -145,6 +145,13 @@ function handleMockSelect(query: string, params: any[]): QueryResult {
     const id = params[0]
     filteredRows = table.filter(row => row.id === id)
   }
+  
+  // Handle combined ID and user_id filtering for documents
+  if (params.length >= 2 && query.includes("id = $1 AND user_id = $2")) {
+    const id = params[0]
+    const userId = params[1]
+    filteredRows = table.filter(row => row.id === id && row.user_id === userId)
+  }
 
   return { rows: filteredRows, rowCount: filteredRows.length }
 }
@@ -167,7 +174,7 @@ function handleMockInsert(query: string, params: any[]): QueryResult {
     return { rows: [], rowCount: 0 }
   }
 
-  const columns = columnsMatch[1].split(",").map(col => col.trim())
+  const columns = columnsMatch[1].split(",").map(col => col.trim().replace(/["`]/g, ''))
   
   // Create new row
   const newRow: DatabaseRow = {}
