@@ -14,6 +14,17 @@ import {
 } from "lucide-react"
 import type { Document } from "@/lib/types"
 
+/**
+ * Debounce utility function
+ */
+function debounce<T extends (...args: any[]) => any>(func: T, wait: number): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout
+  return function (this: any, ...args: Parameters<T>) {
+    clearTimeout(timeout)
+    timeout = setTimeout(() => func.apply(this, args), wait)
+  }
+}
+
 interface DocumentEditorProps {
   documentId: string
   onDocumentDeleted?: () => void
@@ -251,13 +262,4 @@ export function DocumentEditor({ documentId, onDocumentDeleted }: DocumentEditor
       </div>
     </div>
   )
-}
-
-// Debounce utility function
-function debounce<T extends (...args: any[]) => any>(func: T, wait: number): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout
-  return function (this: any, ...args: Parameters<T>) {
-    clearTimeout(timeout)
-    timeout = setTimeout(() => func.apply(this, args), wait)
-  }
 }

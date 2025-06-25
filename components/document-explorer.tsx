@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -45,7 +45,7 @@ export function DocumentExplorer({
       handleCreateDocument()
       onCreateHandled?.()
     }
-  }, [triggerCreate])
+  }, [triggerCreate, onCreateHandled, handleCreateDocument])
 
   const loadDocuments = async () => {
     try {
@@ -64,7 +64,7 @@ export function DocumentExplorer({
     }
   }
 
-  const handleCreateDocument = async () => {
+  const handleCreateDocument = useCallback(async () => {
     try {
       const response = await fetch("/api/documents", {
         method: "POST",
@@ -84,7 +84,7 @@ export function DocumentExplorer({
     } catch (error) {
       console.error("Failed to create document:", error)
     }
-  }
+  }, [onDocumentSelect])
 
   const toggleFolder = (folderId: string) => {
     setExpandedFolders(prev => 
