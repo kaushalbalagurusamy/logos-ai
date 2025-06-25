@@ -4,9 +4,10 @@ import { services } from "@/lib/services/service-registry"
 import { createSuccessResponse, createErrorResponse, parseRequestBody, validateRequired } from "@/lib/api-utils"
 
 export const GET = withAuth(
-  async (request: NextRequest, { params, user }: { params?: { analyticsId: string }; user: any }) => {
+  async (request: NextRequest, { params, user }: { params?: Promise<{ analyticsId: string }>; user: any }) => {
     try {
-      const analyticsId = params?.analyticsId
+      const resolvedParams = await params
+      const analyticsId = resolvedParams?.analyticsId
 
       if (!analyticsId) {
         return NextResponse.json(createErrorResponse("Analytics ID is required"), { status: 400 })
@@ -27,9 +28,10 @@ export const GET = withAuth(
 )
 
 export const PUT = withAuth(
-  async (request: NextRequest, { params, user }: { params?: { analyticsId: string }; user: any }) => {
+  async (request: NextRequest, { params, user }: { params?: Promise<{ analyticsId: string }>; user: any }) => {
     try {
-      const analyticsId = params?.analyticsId
+      const resolvedParams = await params
+      const analyticsId = resolvedParams?.analyticsId
 
       if (!analyticsId) {
         return NextResponse.json(createErrorResponse("Analytics ID is required"), { status: 400 })
@@ -72,9 +74,10 @@ export const PUT = withAuth(
 )
 
 export const DELETE = withAuth(
-  async (request: NextRequest, { params, user }: { params?: { analyticsId: string }; user: any }) => {
+  async (request: NextRequest, { params, user }: { params?: Promise<{ analyticsId: string }>; user: any }) => {
     try {
-      const analyticsId = params?.analyticsId
+      const resolvedParams = await params
+      const analyticsId = resolvedParams?.analyticsId
 
       if (!analyticsId) {
         return NextResponse.json(createErrorResponse("Analytics ID is required"), { status: 400 })

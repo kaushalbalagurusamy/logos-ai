@@ -4,9 +4,10 @@ import { services } from "@/lib/services/service-registry"
 import { createSuccessResponse, createErrorResponse } from "@/lib/api-utils"
 
 export const POST = withAuth(
-  async (request: NextRequest, { params, user }: { params?: { analyticsId: string }; user: any }) => {
+  async (request: NextRequest, { params, user }: { params?: Promise<{ analyticsId: string }>; user: any }) => {
     try {
-      const analyticsId = params?.analyticsId
+      const resolvedParams = await params
+      const analyticsId = resolvedParams?.analyticsId
 
       if (!analyticsId) {
         return NextResponse.json(createErrorResponse("Analytics ID is required"), { status: 400 })

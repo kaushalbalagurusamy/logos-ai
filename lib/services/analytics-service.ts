@@ -257,6 +257,58 @@ export class AnalyticsService extends BaseService {
   }
 
   /**
+   * Search analytics entries for insertion/autocomplete
+   */
+  async searchAnalytics(
+    userId: string, 
+    query: string = '', 
+    limit: number = 10
+  ): Promise<Analytics[]> {
+    try {
+      let searchQuery = `
+        SELECT a.*, af.name as folder_name
+        FROM analytics a
+        LEFT JOIN analytics_folders af ON a.folder_id = af.id
+        WHERE a.user_id = $1
+      `
+
+      const params: any[] = [userId]
+      let paramIndex = 2
+
+      // Add search filter if query provided
+      if (query.trim()) {
+        searchQuery += ` AND (
+          a.title ILIKE $${paramIndex} OR 
+          a.content ILIKE $${paramIndex} OR
+          a.summary ILIKE $${paramIndex} OR
+          EXISTS (
+            SELECT 1 FROM jsonb_array_elements_text(a.tags) tag 
+            WHERE tag ILIKE $${paramIndex}
+          )
+        )`
+        params.push(`%${query.trim()}%`)
+        paramIndex++
+      }
+
+      // Order by relevance (exact title matches first, then by update date)
+      searchQuery += `
+        ORDER BY 
+          CASE WHEN a.title ILIKE $${paramIndex} THEN 1 ELSE 2 END,
+          a.updated_at DESC
+        LIMIT $${paramIndex + 1}
+      `
+      
+      params.push(`%${query.trim()}%`, limit)
+
+      const result = await executeQuery(searchQuery, params)
+      return result.rows.map(this.mapRowToAnalytics)
+    } catch (error) {
+      console.error("Error searching analytics:", error)
+      throw new Error("Failed to search analytics")
+    }
+  }
+
+  /**
    * Maps database row to Analytics domain object
    */
   private mapRowToAnalytics(row: any): Analytics {

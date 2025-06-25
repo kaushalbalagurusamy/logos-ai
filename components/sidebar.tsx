@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input"
 import { FileText, BookOpen, BarChart3, Mic, Search, ChevronLeft, ChevronRight, Plus, Tag } from "lucide-react"
 
 interface SidebarProps {
-  activeCategory: "evidence" | "cases" | "analytics" | "speeches"
-  onCategoryChange: (category: "evidence" | "cases" | "analytics" | "speeches") => void
+  activeCategory: "evidence" | "analytics" | "speeches"
+  onCategoryChange: (category: "evidence" | "analytics" | "speeches") => void
   onEntrySelect: (entryId: string) => void
 }
 

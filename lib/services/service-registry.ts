@@ -2,6 +2,7 @@ import { AIService } from "./ai-service"
 import { AnalyticsService } from "./analytics-service"
 import { AuthService } from "./auth-service"
 import { CaseBuilderService } from "./casebuilder-service"
+import { DocumentService } from "./document-service"
 import { EvidenceCardService } from "./evidence-card-service"
 import { PrepBankService } from "./prepbank-service"
 import { RoundService } from "./round-service"
@@ -14,6 +15,7 @@ class ServiceRegistry {
   public readonly analytics: AnalyticsService
   public readonly auth: AuthService
   public readonly caseBuilder: CaseBuilderService
+  public readonly documents: DocumentService
   public readonly evidenceCards: EvidenceCardService
   public readonly prepBank: PrepBankService
   public readonly rounds: RoundService
@@ -24,6 +26,7 @@ class ServiceRegistry {
     this.analytics = new AnalyticsService()
     this.auth = new AuthService()
     this.caseBuilder = new CaseBuilderService()
+    this.documents = new DocumentService()
     this.evidenceCards = new EvidenceCardService()
     this.prepBank = new PrepBankService()
     this.rounds = new RoundService()

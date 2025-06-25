@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Bold, Underline, Minimize2, Eraser, Palette } from "lucide-react"
+import { useSlashCommand, type SlashCommandItem } from "@/hooks/use-slash-command"
+import { InsertionDropdown } from "@/components/insertion-dropdown"
 import type { FormattingData } from "@/lib/types"
 
 /**
@@ -31,6 +33,7 @@ export interface RichTextEditorProps {
   emphasisFont?: string
   emphasisSize?: number
   minimizeSize?: number
+  enableSlashCommands?: boolean
 }
 
 /**
@@ -76,6 +79,7 @@ export const RichTextEditor = forwardRef<HTMLDivElement, RichTextEditorProps>(
       disabled = false,
       className,
       field,
+      enableSlashCommands = false,
       emphasisFont = "Times New Roman",
       emphasisSize = 12,
       minimizeSize = 6,
@@ -88,6 +92,195 @@ export const RichTextEditor = forwardRef<HTMLDivElement, RichTextEditorProps>(
     const [showColorPicker, setShowColorPicker] = useState(false)
     const [internalValue, setInternalValue] = useState(value)
     const isInternalUpdate = useRef(false)
+
+    /**
+     * Apply formatting data to text content to generate HTML
+     */
+    const applyFormattingToText = useCallback((textContent: string, formatting: FormattingData): string => {
+      if (!formatting) return textContent
+      
+      const allFormats = [
+        ...(formatting.emphasis || []).map((r) => ({ ...r, type: "emphasis" })),
+        ...(formatting.highlights || []).map((r) => ({ ...r, type: "highlight" })),
+        ...(formatting.minimized || []).map((r) => ({ ...r, type: "minimize" })),
+      ]
+      
+      if (allFormats.length === 0) return textContent
+      
+      const points = new Set([0, textContent.length])
+      allFormats.forEach((f) => {
+        points.add(f.start)
+        points.add(f.end)
+      })
+      
+      const sortedPoints = Array.from(points).sort((a, b) => a - b)
+      let html = ""
+      
+      for (let i = 0; i < sortedPoints.length - 1; i++) {
+        const start = sortedPoints[i]
+        const end = sortedPoints[i + 1]
+        const mid = Math.floor((start + end) / 2)
+        const segment = textContent.substring(start, end)
+        
+        if (segment.length === 0) continue
+        
+        let styles = ""
+        let classes = ""
+        
+        const isEmphasized = (formatting.emphasis || []).find((r) => mid >= r.start && mid < r.end)
+        const highlight = (formatting.highlights || []).find((r) => mid >= r.start && mid < r.end)
+        const isMinimized = (formatting.minimized || []).find((r) => mid >= r.start && mid < r.end)
+        
+        if (isEmphasized) {
+          styles += `font-family: '${isEmphasized.font}'; font-size: ${isEmphasized.size}pt; font-weight: bold; text-decoration: underline;`
+        }
+        if (highlight) {
+          classes += ` highlight-${highlight.color}`
+        }
+        if (isMinimized) {
+          styles += `font-size: ${isMinimized.size}pt;`
+        }
+        
+        html += `<span style="${styles}" class="${classes}">${segment}</span>`
+      }
+      return html
+    }, [])
+
+    // Slash command functionality
+    const handleSlashInsert = useCallback((item: SlashCommandItem) => {
+      if (!editorRef.current) return
+
+      const editor = editorRef.current
+      const selection = window.getSelection()
+      
+      if (!selection || selection.rangeCount === 0) return
+
+      const range = selection.getRangeAt(0)
+      const textBeforeCursor = editorRef.current.innerText
+      const cursorPosition = getSelectionRange()?.start || 0
+
+      // Find the slash position
+      const lastSlashIndex = textBeforeCursor.lastIndexOf('/', cursorPosition)
+      
+      if (lastSlashIndex === -1) return
+
+      // Format the inserted content
+      let insertedContent = ''
+      
+      if (item.type === 'evidence-card') {
+        // Format evidence card insertion with proper styling
+        const source = item.source || {}
+        const formatDate = (date: Date | string | undefined) => {
+          if (!date) return "No Date"
+          return new Date(date).getFullYear().toString()
+        }
+        
+        // Build citation with qualifications
+        let citation = "No Citation"
+        if (source.author) {
+          citation = `${source.author} ${formatDate(source.date)}`
+          if (source.publication) {
+            citation += ` (${source.publication})`
+          }
+          
+          // Add qualifications and methodology in parentheses
+          const qualifications = item.authorQualifications || ""
+          const methodology = item.studyMethodology || ""
+          if (qualifications || methodology) {
+            citation += ` (`
+            if (qualifications) citation += qualifications
+            if (qualifications && methodology) citation += "; "
+            if (methodology) citation += methodology
+            citation += `)`
+          }
+        }
+        
+        // Apply formatting to evidence content if available
+        let formattedEvidence = item.content
+        if (item.formattingData) {
+          formattedEvidence = applyFormattingToText(item.content, item.formattingData)
+        }
+        
+        // Create styled HTML content
+        insertedContent = `
+<div style="font-family: 'Times New Roman', serif; font-size: 12pt; font-weight: bold;">TAG: ${item.title}</div>
+<div style="font-family: 'Times New Roman', serif; font-size: 12pt; font-weight: bold;">AUTHOR: <span style="font-size: 12pt; font-weight: bold;">${source.author || 'Unknown'} ${formatDate(source.date)}${source.publication ? ` (${source.publication})` : ''}</span>${(item.authorQualifications || item.studyMethodology) ? ` <span style="font-family: 'Times New Roman', serif; font-size: 6pt; font-weight: normal;">(${[item.authorQualifications, item.studyMethodology].filter(Boolean).join('; ')})</span>` : ''}</div>
+<div style="font-family: 'Times New Roman', serif;">EVIDENCE: ${formattedEvidence}</div>
+
+`
+      } else if (item.type === 'analytics') {
+        // Format analytics insertion - content only with bold styling
+        insertedContent = `<div style="font-family: 'Times New Roman', serif; font-size: 12pt; font-weight: bold;">${item.content}</div>
+
+`
+      }
+
+      // For HTML content insertion, we need to handle it differently
+      if (editorRef.current) {
+        const selection = window.getSelection()
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0)
+          
+          // Find and remove the slash and any search text
+          const textBeforeSlash = textBeforeCursor.substring(0, lastSlashIndex)
+          const textAfterCursor = textBeforeCursor.substring(cursorPosition)
+          
+          // Create temporary container for HTML content
+          const tempDiv = document.createElement('div')
+          tempDiv.innerHTML = insertedContent
+          
+          // Get current editor HTML content
+          const currentHTML = editorRef.current.innerHTML
+          
+          // Calculate positions in HTML content (this is approximate)
+          const beforeHTML = currentHTML.substring(0, lastSlashIndex)
+          const afterHTML = currentHTML.substring(cursorPosition)
+          
+          // Insert HTML content directly
+          const newHTML = beforeHTML + insertedContent + afterHTML
+          editorRef.current.innerHTML = newHTML
+          
+          // Update text content for parent component
+          const newTextContent = editorRef.current.innerText
+          setInternalValue(newTextContent)
+          isInternalUpdate.current = true
+          
+          if (enableAutoSave) {
+            debouncedOnChange(newTextContent)
+          } else {
+            onChange(newTextContent)
+          }
+          
+          // Position cursor after inserted content
+          setTimeout(() => {
+            if (editorRef.current) {
+              editorRef.current.focus()
+              
+              // Move cursor to end of inserted content
+              const selection = window.getSelection()
+              if (selection) {
+                const range = document.createRange()
+                try {
+                  // Position at the end of editor content
+                  range.selectNodeContents(editorRef.current)
+                  range.collapse(false)
+                  selection.removeAllRanges()
+                  selection.addRange(range)
+                } catch (error) {
+                  // Fallback: just focus
+                  editorRef.current.focus()
+                }
+              }
+            }
+          }, 0)
+        }
+      }
+    }, [value, enableAutoSave, enableFormatting, debouncedOnChange, onChange, applyFormattingToText])
+
+    const slashCommand = useSlashCommand({
+      onInsert: handleSlashInsert,
+      enabled: enableSlashCommands && !disabled
+    })
 
     // Auto-save functionality
     const debouncedOnChange = useCallback(
@@ -282,6 +475,16 @@ export const RichTextEditor = forwardRef<HTMLDivElement, RichTextEditorProps>(
       setInternalValue(newText)
       isInternalUpdate.current = true
 
+      // Handle slash commands
+      if (enableSlashCommands) {
+        const selection = window.getSelection()
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0)
+          const cursorPosition = getSelectionRange()?.start || 0
+          slashCommand.handleTextChange(newText, cursorPosition, editorRef.current)
+        }
+      }
+
       if (newText !== value) {
         if (enableAutoSave) {
           debouncedOnChange(newText)
@@ -345,6 +548,12 @@ export const RichTextEditor = forwardRef<HTMLDivElement, RichTextEditorProps>(
     // Keyboard shortcuts
     useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
+        // Handle slash command navigation first
+        if (enableSlashCommands && slashCommand.showDropdown) {
+          slashCommand.handleKeyDown(e as any)
+          return
+        }
+        
         if (!enableFormatting || disabled) return
         
         if (e.ctrlKey || e.metaKey) {
@@ -569,6 +778,18 @@ export const RichTextEditor = forwardRef<HTMLDivElement, RichTextEditorProps>(
           <div className="text-xs text-[#d16969] mt-1 px-1">
             Character limit exceeded by {charCount - characterLimit!} characters
           </div>
+        )}
+
+        {/* Slash Command Dropdown */}
+        {enableSlashCommands && slashCommand.showDropdown && (
+          <InsertionDropdown
+            items={slashCommand.items}
+            selectedIndex={slashCommand.selectedIndex}
+            searchTerm={slashCommand.searchTerm}
+            loading={slashCommand.loading}
+            position={slashCommand.position}
+            onItemSelect={slashCommand.handleItemSelect}
+          />
         )}
       </div>
     )

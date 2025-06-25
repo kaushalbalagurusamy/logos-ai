@@ -7,6 +7,8 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SourceManager } from "@/components/source-manager"
+import { DocumentExplorer } from "@/components/document-explorer"
+import { DocumentEditor } from "@/components/document-editor"
 import AnalyticsList from "@/components/analytics-list"
 import AnalyticsFolderTree from "@/components/analytics-folder-tree"
 import AnalyticsEditor from "@/components/analytics-editor"
@@ -61,7 +63,7 @@ interface LogosAIShellProps {
 }
 
 export function LogosAIShell({ user }: LogosAIShellProps) {
-  const [activeCategory, setActiveCategory] = useState<"evidence" | "cases" | "analytics" | "speeches" | "flow">(
+  const [activeCategory, setActiveCategory] = useState<"evidence" | "documents" | "analytics" | "speeches" | "flow">(
     "analytics", // Set default to analytics for testing
   )
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null)
@@ -73,10 +75,17 @@ export function LogosAIShell({ user }: LogosAIShellProps) {
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
   const [isEditingAnalytics, setIsEditingAnalytics] = useState(false)
 
+  // Source management states
+  const [triggerCreateSource, setTriggerCreateSource] = useState(false)
+
+  // Document management states
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null)
+  const [triggerCreateDocument, setTriggerCreateDocument] = useState(false)
+
   const categories = [
     { key: "evidence" as const, label: "Evidence", icon: FileText, color: "#569cd6" },
     { key: "analytics" as const, label: "Analytics", icon: PencilLine, color: "#4ec9b0" }, // Moved and icon changed
-    { key: "cases" as const, label: "Cases", icon: BookOpen, color: "#dcdcaa" },
+    { key: "documents" as const, label: "Documents", icon: BookOpen, color: "#dcdcaa" },
     { key: "speeches" as const, label: "Speeches", icon: Volume2, color: "#c586c0" },
     { key: "flow" as const, label: "Flow", icon: Sheet, color: "#ce9178" },
   ]
@@ -217,7 +226,18 @@ export function LogosAIShell({ user }: LogosAIShellProps) {
             {/* Sidebar Header */}
             <div className="px-3 py-2 border-b border-[#37373d] flex items-center justify-between">
               <span className="text-xs font-medium uppercase tracking-wide text-[#cccccc]">Explorer</span>
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 hover:bg-[#2a2d2e] text-[#cccccc]">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-6 w-6 p-0 hover:bg-[#2a2d2e] text-[#cccccc]"
+                onClick={() => {
+                  if (activeCategory === "evidence") {
+                    setTriggerCreateSource(true)
+                  } else if (activeCategory === "documents") {
+                    setTriggerCreateDocument(true)
+                  }
+                }}
+              >
                 <Plus className="h-3 w-3" />
               </Button>
             </div>
@@ -290,6 +310,13 @@ export function LogosAIShell({ user }: LogosAIShellProps) {
                       ))}
                     </div>
                   </div>
+                ) : activeCategory === "documents" ? (
+                  <DocumentExplorer
+                    onDocumentSelect={setSelectedDocumentId}
+                    selectedDocumentId={selectedDocumentId}
+                    triggerCreate={triggerCreateDocument}
+                    onCreateHandled={() => setTriggerCreateDocument(false)}
+                  />
                 ) : activeCategory === "analytics" ? (
                   <AnalyticsFolderTree
                     folders={analyticsTestData.folders}
@@ -334,7 +361,24 @@ export function LogosAIShell({ user }: LogosAIShellProps) {
                 selectedCardId={selectedCardId}
                 expandedSources={expandedSources}
                 onToggleSource={handleToggleSource}
+                triggerCreateNew={triggerCreateSource}
+                onCreateNewHandled={() => setTriggerCreateSource(false)}
               />
+            ) : activeCategory === "documents" ? (
+              selectedDocumentId ? (
+                <DocumentEditor
+                  documentId={selectedDocumentId}
+                  onDocumentDeleted={() => setSelectedDocumentId(null)}
+                />
+              ) : (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center">
+                    <FileText className="h-16 w-16 text-[#a1a1a1] mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-[#cccccc] mb-2">No Document Selected</h3>
+                    <p className="text-sm text-[#a1a1a1]">Select a document from the explorer to start editing</p>
+                  </div>
+                </div>
+              )
             ) : activeCategory === "analytics" ? (
               isEditingAnalytics ? (
                 <AnalyticsEditor

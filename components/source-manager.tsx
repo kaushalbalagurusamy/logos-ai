@@ -93,6 +93,8 @@ interface SourceManagerProps {
   selectedCardId?: string | null
   expandedSources?: string[]
   onToggleSource?: (sourceId: string) => void
+  triggerCreateNew?: boolean
+  onCreateNewHandled?: () => void
 }
 
 export function SourceManager({
@@ -101,6 +103,8 @@ export function SourceManager({
   selectedCardId,
   expandedSources = [],
   onToggleSource,
+  triggerCreateNew,
+  onCreateNewHandled,
 }: SourceManagerProps) {
   const [sources, setSources] = useState<Source[]>([])
   const [selectedSource, setSelectedSource] = useState<Source | null>(null)
@@ -119,6 +123,14 @@ export function SourceManager({
   useEffect(() => {
     setSources([ipccAR6Data.source])
   }, [user.id])
+
+  // Handle trigger from parent component
+  useEffect(() => {
+    if (triggerCreateNew) {
+      handleCreateNew()
+      onCreateNewHandled?.()
+    }
+  }, [triggerCreateNew])
 
   // Handle selection from explorer
   useEffect(() => {
@@ -580,7 +592,7 @@ export function SourceManager({
             <div className="flex-1 overflow-hidden">
               {isEditing || isCreating ? (
                 // Source Form
-                <ScrollArea className="h-full">
+                <ScrollArea className="h-full w-full">
                   <div className="p-6 space-y-6 max-w-3xl">
                     {/* Duplicate Warning */}
                     {duplicateWarning && (
@@ -823,7 +835,8 @@ export function SourceManager({
                 </ScrollArea>
               ) : isCreatingCard ? (
                 // Card Creation Form
-                <div className="p-6 space-y-6 max-w-3xl">
+                <ScrollArea className="h-full w-full">
+                  <div className="p-6 space-y-6 max-w-3xl">
                   <h3 className="text-lg font-medium text-[#cccccc] border-b border-[#37373d] pb-2">
                     New Evidence Card
                   </h3>
@@ -909,7 +922,8 @@ export function SourceManager({
                       Cancel
                     </Button>
                   </div>
-                </div>
+                  </div>
+                </ScrollArea>
               ) : selectedCard ? (
                 // Card Editor - Using centralized RichTextEditor
                 <div className="h-full flex flex-col bg-[#1e1e1e]">
@@ -956,7 +970,7 @@ export function SourceManager({
                   </div>
 
                   {/* Editor */}
-                  <div className="flex-1 p-4">
+                  <div className="flex-1 p-4 overflow-hidden">
                     <RichTextEditor
                       value={selectedCard.evidence}
                       onChange={(value) => autoSaveCard({ evidence: value })}
@@ -964,7 +978,8 @@ export function SourceManager({
                       onFormattingChange={(formatting) => autoSaveCard({ formattingData: formatting })}
                       placeholder="Enter evidence text..."
                       minHeight="min-h-[400px]"
-                      className="h-full"
+                      maxHeight="max-h-full"
+                      className="h-full overflow-y-auto"
                       enableFormatting={true}
                       enableHighlighting={true}
                       enableMinimize={true}

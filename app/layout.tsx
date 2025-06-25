@@ -11,6 +11,8 @@ export const metadata: Metadata = {
     generator: 'v0.dev'
 }
 
+import { ErrorBoundary } from "@/components/error-boundary"
+
 export default function RootLayout({
   children,
 }: {
@@ -18,7 +20,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-[#1e1e1e] text-[#cccccc]`}>{children}</body>
+      <body className={`${inter.className} bg-[#1e1e1e] text-[#cccccc]`}>
+        <ErrorBoundary>{children}</ErrorBoundary>
+      </body>
     </html>
   )
 }

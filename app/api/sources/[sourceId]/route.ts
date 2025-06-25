@@ -4,9 +4,9 @@ import { services } from "@/lib/services/service-registry"
 import { createSuccessResponse, createErrorResponse, parseRequestBody, validateRequired } from "@/lib/api-utils"
 
 export const GET = withAuth(
-  async (request: NextRequest, { params, user }: { params: { sourceId: string }; user: any }) => {
+  async (request: NextRequest, { params, user }: { params: Promise<{ sourceId: string }>; user: any }) => {
     try {
-      const { sourceId } = params
+      const { sourceId } = await params
 
       if (!sourceId) {
         return NextResponse.json(createErrorResponse("Source ID is required"), { status: 400 })
@@ -27,9 +27,9 @@ export const GET = withAuth(
 )
 
 export const PUT = withAuth(
-  async (request: NextRequest, { params, user }: { params: { sourceId: string }; user: any }) => {
+  async (request: NextRequest, { params, user }: { params: Promise<{ sourceId: string }>; user: any }) => {
     try {
-      const { sourceId } = params
+      const { sourceId } = await params
 
       if (!sourceId) {
         return NextResponse.json(createErrorResponse("Source ID is required"), { status: 400 })
@@ -81,9 +81,9 @@ export const PUT = withAuth(
 )
 
 export const DELETE = withAuth(
-  async (request: NextRequest, { params, user }: { params: { sourceId: string }; user: any }) => {
+  async (request: NextRequest, { params, user }: { params: Promise<{ sourceId: string }>; user: any }) => {
     try {
-      const { sourceId } = params
+      const { sourceId } = await params
 
       if (!sourceId) {
         return NextResponse.json(createErrorResponse("Source ID is required"), { status: 400 })

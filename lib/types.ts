@@ -205,6 +205,59 @@ export interface CaseTemplate {
   createdAt: Date
 }
 
+// Document types
+export interface Document {
+  id: string
+  title: string
+  content: string
+  folderId?: string // For organizational structure
+  formattingData?: FormattingData // Rich text formatting
+  embeddedCards: Array<{
+    cardId: string
+    position: number // Character position in content
+  }>
+  embeddedAnalytics: Array<{
+    analyticsId: string
+    position: number // Character position in content
+  }>
+  version: number
+  userId: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface DocumentFolder {
+  id: string
+  name: string
+  parentId?: string // For nested folder structure
+  userId: string
+  createdAt: Date
+  updatedAt: Date
+  documents: Document[]
+}
+
+// Insertion types for @ mention system
+export interface InsertionItem {
+  id: string
+  type: "card" | "analytics"
+  title: string
+  searchableText: string
+  insertionData: CardInsertionData | AnalyticsInsertionData
+}
+
+export interface CardInsertionData {
+  type: "card"
+  card: EvidenceCard
+  source: Source
+  formattedText: string
+}
+
+export interface AnalyticsInsertionData {
+  type: "analytics"
+  analytics: Analytics
+  formattedText: string
+}
+
 // Round and analytics types
 export interface Round {
   id: string
@@ -215,30 +268,6 @@ export interface Round {
   notes: string
   userId: string
   createdAt: Date
-}
-
-// Document Writer types
-export interface Document {
-  id: string
-  title: string
-  content: string
-  documentType: "case" | "brief" | "notes"
-  insertedCards: Array<{
-    id: string
-    cardId: string
-    position: number
-    insertedAt: Date
-  }>
-  createdAt: Date
-  updatedAt: Date
-  userId: string
-}
-
-export interface DocumentInsertedCard {
-  id: string
-  cardId: string
-  position: number
-  insertedAt: Date
 }
 
 // AI service types

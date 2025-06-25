@@ -13,7 +13,7 @@ import type { FormattingData, Document, EvidenceCard } from "@/lib/types"
 
 interface EditorProps {
   selectedEntry: string | null
-  activeCategory: "evidence" | "cases" | "analytics" | "speeches" | "documents"
+  activeCategory: "evidence" | "analytics" | "speeches" | "documents"
   mode?: "prep-bank" | "document-writer"
 }
 
