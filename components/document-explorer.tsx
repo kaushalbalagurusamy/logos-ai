@@ -34,24 +34,75 @@ export function DocumentExplorer({
   const [expandedFolders, setExpandedFolders] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
 
-  const loadDocuments = useCallback(async () => {
-    try {
-      setLoading(true)
-      const response = await fetch("/api/documents")
-      const result = await response.json()
-      
-      if (result.success) {
-        setDocuments(result.data.documents || [])
-        setFolders(result.data.folders || [])
+  // Load documents and folders
+  useEffect(() => {
+    const loadDocuments = async () => {
+      try {
+        setLoading(true)
+        const response = await fetch("/api/documents")
+        const result = await response.json()
+        
+        if (result.success) {
+          setDocuments(result.data.documents || [])
+          setFolders(result.data.folders || [])
+        }
+      } catch (error) {
+        console.error("Failed to load documents:", error)
+      } finally {
+        setLoading(false)
       }
-    } catch (error) {
-      console.error("Failed to load documents:", error)
-    } finally {
-      setLoading(false)
     }
+
+    loadDocuments()
   }, [])
 
-  const handleCreateDocument = useCallback(async () => {
+  // Handle create trigger
+  useEffect(() => {
+    const handleCreateDocument = async () => {
+      try {
+        const response = await fetch("/api/documents", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: "Untitled Document",
+            content: ""
+          })
+        })
+        
+        const result = await response.json()
+        
+        if (result.success) {
+          // Reload documents after creation
+          const reloadResponse = await fetch("/api/documents")
+          const reloadResult = await reloadResponse.json()
+          
+          if (reloadResult.success) {
+            setDocuments(reloadResult.data.documents || [])
+            setFolders(reloadResult.data.folders || [])
+          }
+          
+          onDocumentSelect(result.data.id)
+        }
+      } catch (error) {
+        console.error("Failed to create document:", error)
+      }
+    }
+
+    if (triggerCreate) {
+      handleCreateDocument()
+      onCreateHandled?.()
+    }
+  }, [triggerCreate, onCreateHandled, onDocumentSelect])
+
+  const toggleFolder = (folderId: string) => {
+    setExpandedFolders(prev => 
+      prev.includes(folderId) 
+        ? prev.filter(id => id !== folderId)
+        : [...prev, folderId]
+    )
+  }
+
+  const handleCreateClick = async () => {
     try {
       const response = await fetch("/api/documents", {
         method: "POST",
@@ -65,33 +116,20 @@ export function DocumentExplorer({
       const result = await response.json()
       
       if (result.success) {
-        await loadDocuments()
+        // Reload documents after creation
+        const reloadResponse = await fetch("/api/documents")
+        const reloadResult = await reloadResponse.json()
+        
+        if (reloadResult.success) {
+          setDocuments(reloadResult.data.documents || [])
+          setFolders(reloadResult.data.folders || [])
+        }
+        
         onDocumentSelect(result.data.id)
       }
     } catch (error) {
       console.error("Failed to create document:", error)
     }
-  }, [onDocumentSelect, loadDocuments])
-
-  // Load documents and folders
-  useEffect(() => {
-    loadDocuments()
-  }, [loadDocuments])
-
-  // Handle create trigger
-  useEffect(() => {
-    if (triggerCreate) {
-      handleCreateDocument()
-      onCreateHandled?.()
-    }
-  }, [triggerCreate, onCreateHandled, handleCreateDocument])
-
-  const toggleFolder = (folderId: string) => {
-    setExpandedFolders(prev => 
-      prev.includes(folderId) 
-        ? prev.filter(id => id !== folderId)
-        : [...prev, folderId]
-    )
   }
 
   const renderFolder = (folder: DocumentFolder) => {
@@ -176,7 +214,7 @@ export function DocumentExplorer({
           <FileText className="h-8 w-8 text-[#a1a1a1] mx-auto mb-2 opacity-50" />
           <p className="text-xs text-[#a1a1a1] mb-2">No documents yet</p>
           <Button
-            onClick={handleCreateDocument}
+            onClick={handleCreateClick}
             size="sm"
             className="h-6 text-xs bg-[#007acc] hover:bg-[#005a9e] text-white border-0"
           >
