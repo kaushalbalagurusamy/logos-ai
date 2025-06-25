@@ -54,7 +54,14 @@ pnpm install
 
 # Set up environment variables
 cp .env.example .env.local
-# Edit .env.local with your configuration
+# Edit .env.local with your database configuration
+
+# For PostgreSQL Database (Production):
+# Uncomment and configure DATABASE_URL in .env.local
+# DATABASE_URL=postgresql://postgres:[PASSWORD]@[HOST]:[PORT]/postgres
+
+# Run database migrations (if using PostgreSQL)
+pnpm migrate
 
 # Start development server
 pnpm dev
@@ -62,6 +69,30 @@ pnpm dev
 # Open in browser
 open http://localhost:3000
 ```
+
+### Database Configuration
+
+The application supports both mock database (development) and PostgreSQL (production):
+
+#### Mock Database (Default)
+- No setup required
+- Data stored in memory during development
+- Automatically used when `DATABASE_URL` is not set
+
+#### PostgreSQL Database
+1. **Set up Supabase or PostgreSQL instance**
+2. **Configure connection string in `.env.local`:**
+   ```bash
+   # Direct Connection (for VMs/containers)
+   DATABASE_URL=postgresql://postgres:[PASSWORD]@db.[PROJECT].supabase.co:5432/postgres
+   
+   # Transaction Pooler (for serverless)
+   DATABASE_URL=postgresql://postgres.[PROJECT]:[PASSWORD]@aws-0-us-east-2.pooler.supabase.com:6543/postgres
+   ```
+3. **Run migrations:**
+   ```bash
+   pnpm migrate
+   ```
 
 ### Project Structure
 

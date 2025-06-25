@@ -1,10 +1,10 @@
 /**
  * Database connection and query utilities
  * Provides a consistent interface for database operations across the application
+ * Uses real PostgreSQL when DATABASE_URL is set, otherwise falls back to mock database
  */
 
-// For now, we'll use an in-memory mock database for development
-// In production, this would connect to PostgreSQL, MySQL, or your preferred database
+import getConnection from './db'
 
 interface DatabaseRow {
   [key: string]: any
@@ -49,13 +49,17 @@ export async function executeQuery(
   params: any[] = []
 ): Promise<QueryResult> {
   try {
-    // In production, this would execute against a real database:
-    // const client = await pool.connect()
-    // const result = await client.query(query, params)
-    // client.release()
-    // return result
+    // Use real PostgreSQL if DATABASE_URL is configured
+    if (process.env.DATABASE_URL && process.env.NODE_ENV !== 'test') {
+      const sql = getConnection()
+      const result = await sql.unsafe(query, params)
+      return {
+        rows: Array.isArray(result) ? result : [result],
+        rowCount: Array.isArray(result) ? result.length : 1
+      }
+    }
 
-    // Mock implementation for development
+    // Fall back to mock implementation for development/testing
     return mockQueryExecution(query, params)
   } catch (error) {
     console.error("Database query error:", error)
@@ -265,24 +269,19 @@ function handleMockDelete(query: string, params: any[]): QueryResult {
 }
 
 /**
- * Initializes database connection pool
- * In production, this would set up connection pooling for PostgreSQL/MySQL
+ * Initializes database connection
+ * Tests the connection and sets up any necessary configuration
  */
 export async function initializeDatabase(): Promise<void> {
   try {
-    // In production:
-    // const pool = new Pool({
-    //   host: process.env.DB_HOST,
-    //   port: parseInt(process.env.DB_PORT || '5432'),
-    //   database: process.env.DB_NAME,
-    //   user: process.env.DB_USER,
-    //   password: process.env.DB_PASSWORD,
-    //   max: 20,
-    //   idleTimeoutMillis: 30000,
-    //   connectionTimeoutMillis: 2000,
-    // })
-
-    console.log("Database connection initialized (mock)")
+    if (process.env.DATABASE_URL && process.env.NODE_ENV !== 'test') {
+      // Test the connection
+      const sql = getConnection()
+      await sql`SELECT 1 as test`
+      console.log("PostgreSQL database connection initialized successfully")
+    } else {
+      console.log("Database connection initialized (mock mode)")
+    }
   } catch (error) {
     console.error("Failed to initialize database:", error)
     throw error
@@ -294,8 +293,13 @@ export async function initializeDatabase(): Promise<void> {
  */
 export async function closeDatabase(): Promise<void> {
   try {
-    // In production: await pool.end()
-    console.log("Database connections closed (mock)")
+    if (process.env.DATABASE_URL && process.env.NODE_ENV !== 'test') {
+      const sql = getConnection()
+      await sql.end()
+      console.log("PostgreSQL database connections closed")
+    } else {
+      console.log("Database connections closed (mock mode)")
+    }
   } catch (error) {
     console.error("Error closing database:", error)
     throw error
@@ -307,7 +311,12 @@ export async function closeDatabase(): Promise<void> {
  */
 export async function checkDatabaseHealth(): Promise<boolean> {
   try {
-    // In production: await executeQuery('SELECT 1')
+    if (process.env.DATABASE_URL && process.env.NODE_ENV !== 'test') {
+      const sql = getConnection()
+      await sql`SELECT 1 as health_check`
+      return true
+    }
+    // For mock database, always return true
     return true
   } catch (error) {
     console.error("Database health check failed:", error)
