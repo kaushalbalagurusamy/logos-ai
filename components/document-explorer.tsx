@@ -34,20 +34,7 @@ export function DocumentExplorer({
   const [expandedFolders, setExpandedFolders] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Load documents and folders
-  useEffect(() => {
-    loadDocuments()
-  }, [])
-
-  // Handle create trigger
-  useEffect(() => {
-    if (triggerCreate) {
-      handleCreateDocument()
-      onCreateHandled?.()
-    }
-  }, [triggerCreate, onCreateHandled, handleCreateDocument])
-
-  const loadDocuments = async () => {
+  const loadDocuments = useCallback(async () => {
     try {
       setLoading(true)
       const response = await fetch("/api/documents")
@@ -62,7 +49,7 @@ export function DocumentExplorer({
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
   const handleCreateDocument = useCallback(async () => {
     try {
@@ -84,7 +71,20 @@ export function DocumentExplorer({
     } catch (error) {
       console.error("Failed to create document:", error)
     }
-  }, [onDocumentSelect])
+  }, [onDocumentSelect, loadDocuments])
+
+  // Load documents and folders
+  useEffect(() => {
+    loadDocuments()
+  }, [loadDocuments])
+
+  // Handle create trigger
+  useEffect(() => {
+    if (triggerCreate) {
+      handleCreateDocument()
+      onCreateHandled?.()
+    }
+  }, [triggerCreate, onCreateHandled, handleCreateDocument])
 
   const toggleFolder = (folderId: string) => {
     setExpandedFolders(prev => 
