@@ -21,6 +21,18 @@ type AuthenticatedHandler = (
  */
 export function withAuth(handler: AuthenticatedHandler) {
   return async (request: NextRequest, context?: { params?: any }) => {
+    // Handle preflight requests
+    if (request.method === 'OPTIONS') {
+      return new NextResponse(null, { 
+        status: 200,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        }
+      })
+    }
+    
     try {
       // Extract authorization header
       const authHeader = request.headers.get("authorization")
@@ -29,10 +41,12 @@ export function withAuth(handler: AuthenticatedHandler) {
       // For now, we'll mock authentication - in production, this would validate JWT tokens
       // or session cookies and fetch user data from database
       if (!token && !isMockEnvironment()) {
-        return NextResponse.json(
+        const response = NextResponse.json(
           { success: false, error: "Authentication required" },
           { status: 401 }
         )
+        response.headers.set('Access-Control-Allow-Origin', '*')
+        return response
       }
 
       // Mock user for development - replace with actual token validation
@@ -54,13 +68,19 @@ export function withAuth(handler: AuthenticatedHandler) {
       //   )
       // }
 
-      return handler(request, { user, params: context?.params })
+      const response = await handler(request, { user, params: context?.params })
+      response.headers.set('Access-Control-Allow-Origin', '*')
+      response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+      response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+      return response
     } catch (error) {
       console.error("Auth middleware error:", error)
-      return NextResponse.json(
+      const response = NextResponse.json(
         { success: false, error: "Authentication failed" },
         { status: 500 }
       )
+      response.headers.set('Access-Control-Allow-Origin', '*')
+      return response
     }
   }
 }

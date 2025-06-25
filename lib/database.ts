@@ -141,7 +141,7 @@ function handleMockSelect(query: string, params: any[]): QueryResult {
   let filteredRows = table
   if (params.length > 0 && query.includes("user_id")) {
     const userId = params[0]
-    filteredRows = table.filter(row => row.user_id === userId)
+    filteredRows = table.filter(row => row.user_id === userId || row.userId === userId)
   }
 
   // Handle ID-based filtering
@@ -154,7 +154,7 @@ function handleMockSelect(query: string, params: any[]): QueryResult {
   if (params.length >= 2 && query.includes("id = $1 AND user_id = $2")) {
     const id = params[0]
     const userId = params[1]
-    filteredRows = table.filter(row => row.id === id && row.user_id === userId)
+    filteredRows = table.filter(row => row.id === id && (row.user_id === userId || row.userId === userId))
   }
 
   return { rows: filteredRows, rowCount: filteredRows.length }
@@ -212,7 +212,7 @@ function handleMockUpdate(query: string, params: any[]): QueryResult {
   const id = params[params.length - 2] // Assuming ID is second to last param
   const userId = params[params.length - 1] // Assuming user_id is last param
 
-  const rowIndex = table.findIndex(row => row.id === id && row.user_id === userId)
+  const rowIndex = table.findIndex(row => row.id === id && (row.user_id === userId || row.userId === userId))
   
   if (rowIndex >= 0) {
     // Update the row with new values
@@ -258,7 +258,7 @@ function handleMockDelete(query: string, params: any[]): QueryResult {
   const id = params[0]
   const userId = params[1]
 
-  const rowIndex = table.findIndex(row => row.id === id && row.user_id === userId)
+  const rowIndex = table.findIndex(row => row.id === id && (row.user_id === userId || row.userId === userId))
   
   if (rowIndex >= 0) {
     const deletedRow = table.splice(rowIndex, 1)[0]

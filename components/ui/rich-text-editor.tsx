@@ -146,6 +146,30 @@ export const RichTextEditor = forwardRef<HTMLDivElement, RichTextEditorProps>(
       return html
     }, [])
 
+    // Auto-save functionality  
+    const debouncedOnChange = useCallback(
+      debounce((newValue: string, newFormatting?: FormattingData) => {
+        if (enableAutoSave) {
+          setSaveStatus("saving")
+          try {
+            onChange(newValue)
+            if (newFormatting && onFormattingChange) {
+              onFormattingChange(newFormatting)
+            }
+            setSaveStatus("saved")
+          } catch (error) {
+            setSaveStatus("error")
+          }
+        } else {
+          onChange(newValue)
+          if (newFormatting && onFormattingChange) {
+            onFormattingChange(newFormatting)
+          }
+        }
+      }, autoSaveInterval),
+      [onChange, onFormattingChange, enableAutoSave, autoSaveInterval]
+    )
+
     // Slash command functionality
     const handleSlashInsert = useCallback((item: SlashCommandItem) => {
       if (!editorRef.current) return
@@ -281,30 +305,6 @@ export const RichTextEditor = forwardRef<HTMLDivElement, RichTextEditorProps>(
       onInsert: handleSlashInsert,
       enabled: enableSlashCommands && !disabled
     })
-
-    // Auto-save functionality
-    const debouncedOnChange = useCallback(
-      debounce((newValue: string, newFormatting?: FormattingData) => {
-        if (enableAutoSave) {
-          setSaveStatus("saving")
-          try {
-            onChange(newValue)
-            if (newFormatting && onFormattingChange) {
-              onFormattingChange(newFormatting)
-            }
-            setSaveStatus("saved")
-          } catch (error) {
-            setSaveStatus("error")
-          }
-        } else {
-          onChange(newValue)
-          if (newFormatting && onFormattingChange) {
-            onFormattingChange(newFormatting)
-          }
-        }
-      }, autoSaveInterval),
-      [onChange, onFormattingChange, enableAutoSave, autoSaveInterval]
-    )
 
     /**
      * Get current text selection range in editor

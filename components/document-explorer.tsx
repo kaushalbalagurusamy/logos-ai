@@ -81,7 +81,10 @@ export function DocumentExplorer({
             setFolders(reloadResult.data.folders || [])
           }
           
-          onDocumentSelect(result.data.id)
+          // Add small delay to ensure document is fully committed
+          setTimeout(() => {
+            onDocumentSelect(result.data.id)
+          }, 100)
         }
       } catch (error) {
         console.error("Failed to create document:", error)
@@ -125,7 +128,10 @@ export function DocumentExplorer({
           setFolders(reloadResult.data.folders || [])
         }
         
-        onDocumentSelect(result.data.id)
+        // Add small delay to ensure document is fully committed
+        setTimeout(() => {
+          onDocumentSelect(result.data.id)
+        }, 100)
       }
     } catch (error) {
       console.error("Failed to create document:", error)

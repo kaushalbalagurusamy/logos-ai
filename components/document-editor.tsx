@@ -39,37 +39,6 @@ export function DocumentEditor({ documentId, onDocumentDeleted }: DocumentEditor
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "unsaved">("saved")
   const [loading, setLoading] = useState(true)
 
-  // Load document
-  useEffect(() => {
-    if (documentId) {
-      loadDocument()
-    }
-  }, [documentId])
-
-  // Track changes for auto-save
-  useEffect(() => {
-    if (!document || (title === document.title && content === document.content)) {
-      return
-    }
-
-    setSaveStatus("unsaved")
-    
-    const autoSave = debounce(async (newTitle: string, newContent: string) => {
-      if (!document || (!newTitle.trim() && !newContent.trim())) return
-      
-      setSaveStatus("saving")
-      try {
-        await saveDocument(newTitle, newContent)
-        setSaveStatus("saved")
-      } catch (error) {
-        console.error("Auto-save failed:", error)
-        setSaveStatus("unsaved")
-      }
-    }, 2000)
-
-    autoSave(title, content)
-  }, [title, content, document])
-
   const loadDocument = async () => {
     try {
       setLoading(true)
@@ -80,6 +49,8 @@ export function DocumentEditor({ documentId, onDocumentDeleted }: DocumentEditor
         setDocument(result.data)
         setTitle(result.data.title)
         setContent(result.data.content)
+      } else {
+        console.error("Failed to load document:", result.error)
       }
     } catch (error) {
       console.error("Failed to load document:", error)
@@ -115,6 +86,37 @@ export function DocumentEditor({ documentId, onDocumentDeleted }: DocumentEditor
       setSaving(false)
     }
   }, [document])
+
+  // Load document
+  useEffect(() => {
+    if (documentId) {
+      loadDocument()
+    }
+  }, [documentId])
+
+  // Track changes for auto-save
+  useEffect(() => {
+    if (!document || (title === document.title && content === document.content)) {
+      return
+    }
+
+    setSaveStatus("unsaved")
+    
+    const autoSave = debounce(async (newTitle: string, newContent: string) => {
+      if (!document || (!newTitle.trim() && !newContent.trim())) return
+      
+      setSaveStatus("saving")
+      try {
+        await saveDocument(newTitle, newContent)
+        setSaveStatus("saved")
+      } catch (error) {
+        console.error("Auto-save failed:", error)
+        setSaveStatus("unsaved")
+      }
+    }, 2000)
+
+    autoSave(title, content)
+  }, [title, content, document, saveDocument])
 
   const handleDelete = async () => {
     if (!document || !confirm("Are you sure you want to delete this document?")) return
